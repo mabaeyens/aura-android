@@ -16,6 +16,7 @@ What is next on aura-android, roughly in order. This tracks the phased roadmap i
 ## Next
 
 - Port the rest of the pure logic: `WindDirection`, `UVIndex`, the `AirQuality` ICA scales, `MoonPhase` and `LunarTimes`, and `ForecastPhrase` (reproduce the seed derivation exactly, see the plan's parity note).
+- Build the location layer per the local `specs/location.md`: a `:app` `LocationProvider` over the AOSP `LocationManager` that feeds a `Coordinate` into `SolarTimes` and the forecast. Handle the three no-fix states (permission denied, services off, no fix).
 - Stand up the repository layer (the `AEMETService` equivalent) and a first real "Hoy" screen over ported cards and a Compose `AuraSky`.
 
 ## Later
@@ -27,5 +28,7 @@ What is next on aura-android, roughly in order. This tracks the phased roadmap i
 ## Standing notes
 
 - The AEMET key is shared and never committed (plan section 9).
+- Location uses the platform AOSP `LocationManager` (via `LocationManagerCompat.getCurrentLocation`), never Google Play Services. This keeps Aura working on GMS-less devices and behaving the same on every OEM as on the emulator. `:app` acquires location and hands `:core` a plain `Coordinate`; `:core` stays free of any `android.*` or `com.google.*` import. Full spec in the local `specs/location.md`.
+- Test-device plan: a Pixel is the clean development reference; the real OEM variety (Samsung, Xiaomi) comes from Samsung Remote Test Lab and Firebase Test Lab rather than more hardware. Watch for OEM background-killing (WorkManager for any refresh, never a bare service).
 - The version stack is pinned deliberately. Read `CLAUDE.md` before bumping anything.
 - MITECO's air-quality host has an incomplete TLS chain. The fix is a scoped Network Security Config trust-anchor for that domain only, not a global bypass (plan sections 5 and 10).

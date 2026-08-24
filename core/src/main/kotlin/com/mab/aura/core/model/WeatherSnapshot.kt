@@ -193,6 +193,13 @@ data class WeatherSnapshot(
         }
         return (currentSky ?: "").endsWith("n")
     }
+
+    /**
+     * Anchor for the `make()` factory and its AEMET-mapping helpers, which live as companion extensions in
+     * `WeatherSnapshotFactory.kt` (Swift keeps them as a `static` `extension` on the same type). Kept empty
+     * here so those `WeatherSnapshot.Companion.xxx` extensions have a companion to attach to.
+     */
+    companion object
 }
 
 /**

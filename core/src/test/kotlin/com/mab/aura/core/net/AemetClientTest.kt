@@ -4,6 +4,9 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
+import java.io.ByteArrayOutputStream
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -134,5 +137,48 @@ class AemetClientTest {
             runTest { client().fetchText("/prediccion/ccaa/hoy/mad") }
         }
         assertEquals(500, e.code)
+    }
+
+    @Test
+    fun avisos_unpacksTheTarAndParsesOnlyTheXmlMembers() = runTest {
+        val cap = """
+            <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+              <info>
+                <language>es-ES</language>
+                <event>Lluvias</event>
+                <parameter><valueName>AEMET-Meteoalerta nivel</valueName><value>amarillo</value></parameter>
+                <parameter><valueName>AEMET-Meteoalerta parametro</valueName><value>PR;Lluvias;40 mm</value></parameter>
+                <area><areaDesc>Madrid</areaDesc>
+                  <geocode><valueName>AEMET-Meteoalerta zona</valueName><value>772201</value></geocode>
+                </area>
+              </info>
+            </alert>
+        """.trimIndent()
+        val tar = tarOf(
+            "Z_CAP_C_LEMM_001.xml" to cap.toByteArray(),
+            "readme.txt" to "not a cap file".toByteArray(),   // non-.xml member must be ignored
+        )
+        server.enqueue(envelopePointingToDatos())
+        server.enqueue(MockResponse().setBody(Buffer().write(tar)))   // the binary tar payload
+
+        val alerts = client().avisos(area = "72")
+
+        assertEquals(1, alerts.size)
+        assertEquals("772201", alerts.first().zona)
+        assertEquals("Lluvias", alerts.first().phenomenon)
+        assertTrue(server.takeRequest().path!!.startsWith("/opendata/api/avisos_cap/ultimoelaborado/area/72"))
+    }
+
+    private fun tarOf(vararg entries: Pair<String, ByteArray>): ByteArray {
+        val bos = ByteArrayOutputStream()
+        TarArchiveOutputStream(bos).use { tos ->
+            for ((name, body) in entries) {
+                val entry = TarArchiveEntry(name).apply { size = body.size.toLong() }
+                tos.putArchiveEntry(entry)
+                tos.write(body)
+                tos.closeArchiveEntry()
+            }
+        }
+        return bos.toByteArray()
     }
 }

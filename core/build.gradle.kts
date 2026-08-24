@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)
+    // Apache Commons Compress: the standard JVM tar reader (neither the JDK nor Android ships one).
+    // Used only to unpack AEMET's avisos .tar of CAP-XML files; see net/TarReader.kt.
+    implementation(libs.commons.compress)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)

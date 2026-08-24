@@ -3,6 +3,7 @@ package com.mab.aura.core.net
 import com.mab.aura.core.model.MunicipioForecast
 import com.mab.aura.core.model.MunicipioHourly
 import com.mab.aura.core.model.UVIForecast
+import com.mab.aura.core.model.WeatherAlert
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -47,8 +48,8 @@ sealed class AemetClientException(message: String) : Exception(message) {
  * throwing methods become `suspend` functions that throw [AemetClientException].
  *
  * Not ported yet, because their supporting types are still deferred to later net-layer steps: `observacionTodas`
- * (needs `StationObservation`), `avisos` (needs a tar reader + `CAPParser`), and the plain-text `hoy` bulletin
- * helpers. The [fetchText]/[fetchBinary] engine they build on is here, so they are a thin addition later.
+ * (needs `StationObservation`) and the plain-text `hoy` bulletin helpers. The [fetchText]/[fetchBinary] engine
+ * they build on is here, so they are a thin addition later.
  */
 class AemetClient(
     private val apiKey: String,
@@ -212,4 +213,17 @@ class AemetClient(
      */
     suspend fun radarRegional(code: String): ByteArray =
         fetchBinary("/red/radar/regional/$code")
+
+    /**
+     * Active meteorological warnings for an AEMET avisos area (a `.tar` of CAP-XML files). [area] is a
+     * two-digit community code (from `AvisoArea.forProvincia`). The payload is unpacked with [TarReader]
+     * and each `.xml` member parsed by [CAPParser]; filter the result to a location by province with
+     * `List<WeatherAlert>.topActive`.
+     */
+    suspend fun avisos(area: String): List<WeatherAlert> {
+        val tar = fetchBinary("/avisos_cap/ultimoelaborado/area/$area")
+        return TarReader.files(tar)
+            .filter { it.first.endsWith(".xml") }
+            .flatMap { CAPParser.parse(it.second) }
+    }
 }

@@ -7,11 +7,12 @@ What is next on aura-android, roughly in order. This tracks the phased roadmap i
 - 2026-08-24: Installed the Android toolchain (keg-only JDK 21, Android Studio, SDK for API 36) and expanded the porting plan with a disk-footprint section and a file-by-file Swift-to-Kotlin map.
 - 2026-08-24: Scaffolded the project: two Gradle modules (`:app` Compose Material 3, `:core`), building an 11 MB debug APK with passing unit tests. First logic port landed, `SolarTimes` from AuraKit, and `MainActivity` shows Madrid sun times as an end-to-end check.
 - 2026-08-24: Set up the repo (README, license, orientation and release docs, changelog, privacy, gitignored `specs/` and `notes/`) and published it public at github.com/mabaeyens/aura-android.
+- 2026-08-24: Ported the AEMET wire decodables to kotlinx.serialization (`MunicipioForecast`, `MunicipioHourly`, `UVIForecast`) in `:core/model/`, with decode tests pinning down the two ways kotlinx.serialization differs from Swift `Codable`: optionals need a `= null` default to tolerate a missing key, and the client `Json` needs `ignoreUnknownKeys = true`.
 
 ## Now
 
-- Port the core models to kotlinx.serialization: `WeatherSnapshot` and the AEMET decodables (`MunicipioForecast`, `MunicipioHourly`, `UVIForecast`).
-- Port `AEMETClient`'s two-call envelope-then-`datos` model with Retrofit and OkHttp.
+- Port `WeatherSnapshot` (the 675-line central view model every surface renders from) to a `kotlinx.serialization` data class in `:core/model/`. Keep every field nullable, port `isNight(at:)` and friends as functions, turn `WeatherSnapshot+Preview.swift` into test/preview fixtures.
+- Port `AEMETClient`'s two-call envelope-then-`datos` model with Retrofit and OkHttp. First add Retrofit/OkHttp to `gradle/libs.versions.toml` (not there yet); reuse the `Json { ignoreUnknownKeys = true }` config the model tests already assume.
 
 ## Next
 

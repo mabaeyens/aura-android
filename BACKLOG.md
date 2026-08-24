@@ -2,6 +2,12 @@
 
 What is next on aura-android, roughly in order. This tracks the phased roadmap in the porting plan (`aura-apps/specs/android-port.md`, section 11).
 
+## Done
+
+- 2026-08-24: Installed the Android toolchain (keg-only JDK 21, Android Studio, SDK for API 36) and expanded the porting plan with a disk-footprint section and a file-by-file Swift-to-Kotlin map.
+- 2026-08-24: Scaffolded the project: two Gradle modules (`:app` Compose Material 3, `:core`), building an 11 MB debug APK with passing unit tests. First logic port landed, `SolarTimes` from AuraKit, and `MainActivity` shows Madrid sun times as an end-to-end check.
+- 2026-08-24: Set up the repo (README, license, orientation and release docs, changelog, privacy, gitignored `specs/` and `notes/`) and published it public at github.com/mabaeyens/aura-android.
+
 ## Now
 
 - Port the core models to kotlinx.serialization: `WeatherSnapshot` and the AEMET decodables (`MunicipioForecast`, `MunicipioHourly`, `UVIForecast`).

@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+
+# Gradle / Android build output
+.gradle/
+**/build/
+/local.properties
+/captures
+.externalNativeBuild
+.cxx
+
+# Android Studio / IntelliJ
+*.iml
+/.idea/
+
+# Kotlin
+.kotlin/
+
+# Local specs (per Projects convention: specs/ is local-only)
+specs/
+
+# Local-only notes kept off GitHub but on disk
+notes/
+
+# Local-only docs (submission material, anything not meant to be public)
+docs/local/
+
+# Secrets: the AEMET key and any signing keystore never enter the repo
+.env
+*.jks
+*.keystore
+release-signing.properties
+keystore.properties
+
+# Obsidian workspace, if used here too
+.obsidian/
+
+# Python bytecode (helper scripts)
+__pycache__/

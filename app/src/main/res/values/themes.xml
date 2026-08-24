@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window/base theme applied before Compose draws. Compose (Material 3)
+         owns the actual UI colours; this only sets the pre-draw window. -->
+    <style name="Theme.Aura" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

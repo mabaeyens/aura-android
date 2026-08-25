@@ -12,20 +12,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.mab.aura.ui.hoy.HoyScreen
+import com.mab.aura.ui.locations.AddLocationScreen
+import com.mab.aura.ui.locations.LocationsScreen
 import com.mab.aura.ui.settings.SettingsScreen
 import com.mab.aura.ui.theme.AuraTheme
 
-/** The app's destinations. Two for now; a real back stack (Navigation-Compose) lands with favourites. */
-private enum class Screen { Hoy, Settings }
+/** The app's destinations. Hoy is the root; every other screen returns to a statically-known parent (see below). */
+private enum class Screen { Hoy, Settings, Locations, AddLocation }
 
 /**
- * The app's single activity. It hosts the live "Hoy" screen (a full-bleed sky, its own surface) and the
- * "Ajustes" screen, swapping between them with a small saved screen state rather than a navigation library.
+ * The app's single activity. It hosts the live "Hoy" screen (a full-bleed sky, its own surface), "Ajustes",
+ * and the "Ubicaciones" pair, swapping between them with a small saved screen state rather than a navigation
+ * library.
  *
- * A note for anyone coming from iOS: SwiftUI reaches for `NavigationStack` almost by reflex, but with only
- * two destinations a `when` over a `rememberSaveable` enum is the clearer, dependency-free equivalent — it is
- * literally "show this view or that one". Once there are three or more screens (favourites, add-location) this
- * moves to Jetpack Navigation-Compose, which owns a proper back stack.
+ * A note for anyone coming from iOS: SwiftUI reaches for `NavigationStack` almost by reflex. Here every screen
+ * has a *single, fixed* parent — Ajustes and Ubicaciones return to Hoy, and Añadir returns to Ubicaciones — so
+ * a `when` over a `rememberSaveable` enum, with each screen's Back routing to its known parent, stays the clear,
+ * dependency-free equivalent without needing a real back stack. If a screen ever gains more than one possible
+ * caller, that's the point to adopt Jetpack Navigation-Compose and let it own the stack.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +42,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Hoy -> HoyScreen(
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = { screen = Screen.Settings },
+                        onOpenLocations = { screen = Screen.Locations },
                     )
 
                     Screen.Settings -> {
@@ -46,6 +51,23 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             modifier = Modifier.fillMaxSize(),
                             onBack = { screen = Screen.Hoy },
+                        )
+                    }
+
+                    Screen.Locations -> {
+                        BackHandler { screen = Screen.Hoy }
+                        LocationsScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Hoy },
+                            onAddLocation = { screen = Screen.AddLocation },
+                        )
+                    }
+
+                    Screen.AddLocation -> {
+                        BackHandler { screen = Screen.Locations }
+                        AddLocationScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Locations },
                         )
                     }
                 }

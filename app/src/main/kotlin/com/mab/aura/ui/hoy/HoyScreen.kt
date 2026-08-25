@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,6 +56,7 @@ import java.time.Instant
 fun HoyScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onOpenLocations: () -> Unit = {},
     now: Instant = Instant.now(),
 ) {
     val viewModel: HoyViewModel = viewModel()
@@ -104,7 +106,12 @@ fun HoyScreen(
                 )
             }
 
-            is HoyUiState.Content -> HoyContent(snapshot = s.snapshot, notice = s.notice, now = now)
+            is HoyUiState.Content -> {
+                // One banner slot, so a data problem (offline, rate-limited) takes priority over the softer
+                // "showing a default location" note; the latter shows only when the fetch itself was fine.
+                val effectiveNotice = s.notice ?: locationFallbackText(s.locationFallback, permissionAsked)
+                HoyContent(snapshot = s.snapshot, notice = effectiveNotice, now = now)
+            }
 
             is HoyUiState.Error -> CenteredMessage {
                 Column(
@@ -117,8 +124,17 @@ fun HoyScreen(
             }
         }
 
-        // The one bit of chrome over the sky: a settings gear, top-right, clear of the status bar. White to
-        // read against the sky, like the rest of the overlaid text.
+        // The chrome over the sky, clear of the status bar and white to read against it: a place pin top-left
+        // to manage saved locations, a settings gear top-right.
+        IconButton(
+            onClick = onOpenLocations,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .safeDrawingPadding()
+                .padding(4.dp),
+        ) {
+            Icon(Icons.Filled.Place, contentDescription = "Ubicaciones", tint = Color.White)
+        }
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier
@@ -130,6 +146,20 @@ fun HoyScreen(
         }
     }
 }
+
+/**
+ * The Spanish notice for a location fallback, or null for none. We only mention a missing permission once the
+ * screen has actually asked ([permissionAsked]): before the prompt appears, saying "no permission" would be
+ * premature. Services-off and no-fix are surfaced straight away, since the permission prompt can't fix either.
+ */
+private fun locationFallbackText(fallback: LocationFallback?, permissionAsked: Boolean): String? =
+    when (fallback) {
+        null -> null
+        LocationFallback.PermissionDenied ->
+            if (permissionAsked) "Sin permiso de ubicación. Mostrando Madrid." else null
+        LocationFallback.ServicesOff -> "La ubicación está desactivada. Mostrando Madrid."
+        LocationFallback.NoFix -> "No se pudo determinar tu ubicación. Mostrando Madrid."
+    }
 
 /** The weather itself: the card stack in a vertical scroll over the sky, as the app lays it out. */
 @Composable

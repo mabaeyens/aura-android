@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Icon
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -63,20 +61,19 @@ internal fun AuraSolarSheet(snapshot: WeatherSnapshot, now: Instant, onClose: ()
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 FactRow("Primera luz", timeText(solar?.civilDawn)) {
-                    ChevronMark(up = true, tint = Color(0.98f, 0.75f, 0.5f))
+                    GlyphMark(R.drawable.ic_wx_sunrise)
                 }
                 FactRow("Orto", timeText(sunrise)) {
-                    ChevronMark(up = true, tint = Color(1f, 0.82f, 0.4f))
+                    GlyphMark(R.drawable.ic_wx_sunrise)
                 }
                 FactRow("Mediodía solar", timeText(noon)) {
-                    Icon(painterResource(R.drawable.ic_wx_clear_day), contentDescription = null,
-                        tint = Color(1f, 0.9f, 0.5f), modifier = Modifier.size(20.dp))
+                    GlyphMark(R.drawable.ic_wx_clear_day)
                 }
                 FactRow("Ocaso", timeText(sunset)) {
-                    ChevronMark(up = false, tint = Color(1f, 0.6f, 0.35f))
+                    GlyphMark(R.drawable.ic_wx_sunset)
                 }
                 FactRow("Última luz", timeText(solar?.civilDusk)) {
-                    ChevronMark(up = false, tint = Color(0.62f, 0.55f, 0.75f))
+                    GlyphMark(R.drawable.ic_wx_sunset)
                 }
                 FactRow("Luz del día", dayLength?.let { durationText(it.seconds) } ?: "—", last = true) {
                     DotMark(Color.White.copy(alpha = 0.85f))
@@ -116,13 +113,14 @@ private fun SunSignature() {
     }
 }
 
+/** A colourful Meteocons glyph (sunrise/sunset/sun) as a fact-row mark — the counterpart to iOS's sun symbols.
+ *  Drawn untinted so it keeps its own warm colours, like the sky glyphs on the cards. */
 @Composable
-private fun ChevronMark(up: Boolean, tint: Color) {
-    Icon(
-        imageVector = if (up) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+private fun GlyphMark(@DrawableRes icon: Int) {
+    Image(
+        painter = painterResource(icon),
         contentDescription = null,
-        tint = tint,
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(22.dp),
     )
 }
 

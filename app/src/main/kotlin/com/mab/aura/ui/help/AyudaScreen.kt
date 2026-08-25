@@ -2,6 +2,8 @@ package com.mab.aura.ui.help
 
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -41,22 +44,26 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.ui.AnimatedConditionGlyph
+import com.mab.aura.ui.theme.Palette
 
 /**
  * "Ayuda" — the reference screen ported from `HelpView.swift`. It does two jobs: explain how to get a free
  * AEMET key, and give a legend for the app's icons and cards. Reached from the hero gear menu, next to
  * Acerca de (see [com.mab.aura.ui.hoy.HoyScreen]).
  *
- * What differs from the iOS screen, and why: the metric-card rows on iOS use SF Symbols (humidity, umbrella,
- * sunrise, the UV badges…). This project ships only `material-icons-core` on purpose, which has none of those,
- * and I don't want to pull in the large extended icon set just for a legend. So the sky-condition legend uses
- * the app's real [AnimatedConditionGlyph] (identical to the cards, can't drift, and it plays the animated
- * Meteocons so the legend previews exactly what the forecast shows), the navigation legend uses the core
- * icons the app already shows, and the per-metric cards are described in words rather than with a stand-in
- * icon. The colour scales aren't repeated here: each card opens its own on a tap, and this points there.
+ * The legend mirrors the iOS screen section for section, each metric with its own glyph. Where iOS draws an
+ * SF Symbol, Android draws the Meteocons equivalent — the same colourful glyphs the cards use, so the legend
+ * can't drift from what the forecast shows: sunrise/sunset, umbrella, humidity, wind, and the numbered UV
+ * badges all come from `res/drawable/ic_wx_*`. The few genuinely plain iOS symbols (temperatura máx/mín arrows,
+ * the aviso triangle) use `ic_arrow_*` and `material-icons-core`'s Warning; air quality shows its ICA colour
+ * swatch, as the card does. The sky-condition legend plays the real [AnimatedConditionGlyph]. No heavy
+ * `material-icons-extended` dependency is pulled in for any of it. The colour scales aren't repeated here: each
+ * card opens its own on a tap, and this points there.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +97,13 @@ fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             ApiKeySection(onRequestKey = ::openApiKeyPage)
             SkySection()
-            CardsSection()
+            TemperatureSection()
+            RainHumiditySection()
+            WindSection()
+            SunMoonSection()
+            UVSection()
+            AirSection()
+            AvisoSection()
             AppSection()
             ScalesSection()
         }
@@ -142,24 +155,81 @@ private fun SkySection() {
     }
 }
 
-/**
- * The metric cards, described in words. On iOS each row has its own SF Symbol; here they are text because the
- * core icon set has no match (see the class note). Grouped by card so the meaning still reads as a legend.
- */
 @Composable
-private fun CardsSection() {
+private fun TemperatureSection() {
     Section(
-        header = "Las tarjetas",
-        footer = "La gota con ondas (humedad) y el paraguas o la gota lisa (lluvia) son cosas distintas a propósito.",
+        header = "Temperatura",
+        footer = "Los grados se colorean en una escala continua de azul (frío) a rojo (calor): la misma en las tarjetas, las barras de rango y el widget.",
     ) {
-        TextRow("Temperatura máxima y mínima", "La más alta y la más baja previstas para el día. Los grados se colorean en una escala continua de azul (frío) a rojo (calor), la misma en las tarjetas, las barras de rango y el widget.")
-        TextRow("Probabilidad de lluvia", "El porcentaje de que llueva. Es la lluvia.")
-        TextRow("Humedad relativa", "El agua que hay en el aire, en %. No es la lluvia.")
-        TextRow("Viento", "La velocidad en km/h, la unidad que da AEMET; la flecha señala la dirección y su color, la intensidad. Toca la tarjeta para ver la escala Beaufort completa.")
-        TextRow("Amanecer y atardecer", "La salida (orto) y la puesta (ocaso) del sol.")
-        TextRow("Índice UV", "El máximo previsto del día con el cielo despejado. Toca la tarjeta para ver cada nivel, de bajo a extremadamente alto; el cielo nublado puede bajar el UV de ahora por debajo de ese máximo.")
-        TextRow("Calidad del aire (ICA)", "El Índice de Calidad del Aire de MITECO. Toca la tarjeta para ver la escala completa y cada contaminante por separado.")
-        TextRow("Aviso meteorológico", "AEMET tiene un aviso activo para la zona. El color indica el nivel: amarillo, naranja o rojo, de menor a mayor peligro.")
+        TintRow(R.drawable.ic_arrow_up, "Temperatura máxima", "La más alta prevista para el día.")
+        TintRow(R.drawable.ic_arrow_down, "Temperatura mínima", "La más baja prevista para el día.")
+    }
+}
+
+@Composable
+private fun RainHumiditySection() {
+    Section(
+        header = "Lluvia y humedad",
+        footer = "El paraguas (lluvia) y la gota con ondas (humedad) son cosas distintas a propósito.",
+    ) {
+        GlyphRow(R.drawable.ic_wx_umbrella, "Probabilidad de lluvia", "El porcentaje de que llueva. Es la lluvia.")
+        GlyphRow(R.drawable.ic_wx_humidity, "Humedad relativa", "El agua que hay en el aire, en %. No es la lluvia.")
+    }
+}
+
+@Composable
+private fun WindSection() {
+    Section(
+        header = "Viento",
+        footer = "Toca la tarjeta del viento para ver la escala Beaufort completa.",
+    ) {
+        GlyphRow(R.drawable.ic_wx_wind, "Velocidad del viento", "La velocidad en km/h, la unidad que da AEMET.")
+        // The wind rose is a custom compass mark on the card, not a Meteocons glyph; the tinted arrow stands in
+        // for it here, teal like the card's pointer, as iOS uses a teal north arrow in this same row.
+        TintRow(R.drawable.ic_arrow_up, "Rosa de los vientos", "La flecha señala la dirección del viento; su color, la intensidad.", tint = Palette.tempTeal)
+    }
+}
+
+@Composable
+private fun SunMoonSection() {
+    Section(header = "Sol y luna") {
+        GlyphRow(R.drawable.ic_wx_sunrise, "Amanecer", "La salida (orto) del sol.")
+        GlyphRow(R.drawable.ic_wx_sunset, "Atardecer", "La puesta (ocaso) del sol.")
+        ConditionRow("11", night = true, "De noche, el sol de los iconos se convierte en luna.")
+    }
+}
+
+@Composable
+private fun UVSection() {
+    Section(
+        header = "Índice UV",
+        footer = "Es el máximo previsto del día con el cielo despejado. Toca la tarjeta para ver la escala completa.",
+    ) {
+        GlyphRow(R.drawable.ic_wx_uv_2, "UV bajo (0–2)", "Sin protección necesaria.")
+        GlyphRow(R.drawable.ic_wx_uv_4, "UV moderado (3–5)", "Gafas de sol y crema.")
+        GlyphRow(R.drawable.ic_wx_uv_7, "UV alto (6–7)", "Protección recomendada.")
+        GlyphRow(R.drawable.ic_wx_uv_9, "UV muy alto (8–10)", "Evita el sol del mediodía.")
+        GlyphRow(R.drawable.ic_wx_uv_11, "UV extremadamente alto (11+)", "Evita la exposición al sol.")
+        GlyphRow(R.drawable.ic_wx_cloudy, "UV atenuado por nubes", "El cielo nublado puede bajar el UV de ahora por debajo del máximo.")
+    }
+}
+
+@Composable
+private fun AirSection() {
+    Section(
+        header = "Calidad del aire",
+        footer = "Toca la tarjeta para ver la escala completa y cada contaminante por separado.",
+    ) {
+        // The card shows the ICA level as a coloured swatch, not an icon; the legend uses the same swatch. A
+        // mid "Regular" band (3) is representative of the six-colour scale.
+        SwatchRow(Palette.airQuality(3), "Calidad del aire (ICA)", "El Índice de Calidad del Aire de MITECO, del 1 (buena) al 6 (extremadamente desfavorable).")
+    }
+}
+
+@Composable
+private fun AvisoSection() {
+    Section(header = "Avisos") {
+        IconRow(Icons.Filled.Warning, "Aviso meteorológico", "AEMET tiene un aviso activo para la zona. El color indica el nivel: amarillo, naranja o rojo, de menor a mayor peligro.")
     }
 }
 
@@ -282,16 +352,71 @@ private fun IconRow(icon: ImageVector, title: String, meaning: String) {
     }
 }
 
-/** A pure-text legend row: a title over a meaning, for the metric cards that have no core icon. */
+/** A legend row led by a colourful Meteocons glyph (`ic_wx_*`), drawn untinted so it keeps its own colours —
+ *  the counterpart to iOS's `.multicolor` SF Symbols. Used for the weather metrics: sunrise, umbrella, UV, … */
 @Composable
-private fun TextRow(title: String, meaning: String) {
-    Column {
-        Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        Text(
-            text = meaning,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun GlyphRow(@DrawableRes icon: Int, title: String, meaning: String) {
+    LegendRow(
+        leading = {
+            Image(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+            )
+        },
+        title = title,
+        meaning = meaning,
+    )
+}
+
+/** A legend row led by a monochrome drawable tinted to a flat colour — the plain iOS symbols that carry meaning
+ *  through shape, not colour (the temperatura arrows), or a single accent (the teal wind-rose arrow). */
+@Composable
+private fun TintRow(
+    @DrawableRes icon: Int,
+    title: String,
+    meaning: String,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    LegendRow(
+        leading = {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        title = title,
+        meaning = meaning,
+    )
+}
+
+/** A legend row led by a filled colour circle, matching the air-quality card's ICA swatch. */
+@Composable
+private fun SwatchRow(color: Color, title: String, meaning: String) {
+    LegendRow(
+        leading = {
+            Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(color))
+        },
+        title = title,
+        meaning = meaning,
+    )
+}
+
+/** The shared shell for a legend row: a leading glyph in a fixed-width gutter, then the title over its meaning. */
+@Composable
+private fun LegendRow(leading: @Composable () -> Unit, title: String, meaning: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
+        Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) { leading() }
+        Column {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                text = meaning,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

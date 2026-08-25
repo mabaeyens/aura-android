@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,9 +58,15 @@ fun AuraAirQualityCard(
                     horizontalArrangement = Arrangement.spacedBy(size.stackSpacing),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // The ICA colour swatch carrying the 1–6 category number.
+                    // The ICA colour swatch carrying the 1–6 category number. The coloured shadow is iOS's
+                    // glow behind the swatch (a tinted halo). Compose renders the tint on API 28+; on 26–27 it
+                    // degrades to a faint neutral shadow, which is fine.
                     Box(
-                        modifier = Modifier.size(46.dp).clip(CircleShape).background(color),
+                        modifier = Modifier
+                            .size(46.dp)
+                            .shadow(6.dp, CircleShape, spotColor = color, ambientColor = color)
+                            .clip(CircleShape)
+                            .background(color),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(

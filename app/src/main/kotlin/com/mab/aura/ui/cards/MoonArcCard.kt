@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,10 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.lunar.LunarPosition
 import com.mab.aura.core.lunar.LunarTimes
 import com.mab.aura.core.model.WeatherSnapshot
@@ -101,9 +100,9 @@ fun AuraMoonArcCard(
 
                     // Salida on the left (moonrise, east), puesta on the right (moonset, west).
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                        MoonEnd(Icons.Filled.KeyboardArrowUp, "Salida", moonrise, size)
+                        MoonEnd(R.drawable.ic_arrow_up, "Salida", moonrise, size)
                         Spacer(Modifier.weight(1f))
-                        MoonEnd(Icons.Filled.KeyboardArrowDown, "Puesta", moonset, size, trailing = true)
+                        MoonEnd(R.drawable.ic_arrow_down, "Puesta", moonset, size, trailing = true)
                     }
 
                     Text(
@@ -128,10 +127,10 @@ fun AuraMoonArcCard(
     }
 }
 
-/** Salida/puesta end: the chevron in cool moonlight + the precise time, over its label. */
+/** Salida/puesta end: the arrow in cool moonlight + the precise time, over its label. */
 @Composable
 private fun MoonEnd(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     label: String,
     time: Instant?,
     size: AuraSize,
@@ -145,8 +144,10 @@ private fun MoonEnd(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // The moon arc mirrors iOS's plain arrow.up/arrow.down (not the sun arc's colour glyph): a
+            // monochrome straight arrow tinted in cool moonlight.
             Icon(
-                imageVector = icon,
+                painter = painterResource(icon),
                 contentDescription = null,
                 tint = Palette.tempBlue,
                 modifier = Modifier.size((size.smallSize.value + 2).dp),

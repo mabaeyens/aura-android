@@ -1,0 +1,47 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:strokeColor="#FFF8AF18"
+        android:strokeWidth=".5"
+        android:strokeMiterLimit="10"
+        android:pathData="M32 21.5A10.5 10.5 0 1 0 32 42.5 10.5 10.5 0 1 0 32 21.5z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="26.75"
+                android:startY="22.91"
+                android:endX="37.25"
+                android:endY="41.09">
+                <item
+                    android:color="#FFFBBF24"
+                    android:offset="0"/>
+                <item
+                    android:color="#FFFBBF24"
+                    android:offset=".45"/>
+                <item
+                    android:color="#FFF59E0B"
+                    android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:strokeColor="#FFFBBF24"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeMiterLimit="10"
+        android:pathData="M32 15.71V9.5m0 45v-6.21m11.52-27.81l4.39-4.39M16.09 47.91l4.39-4.39m0-23l-4.39-4.39m31.82 31.78l-4.39-4.39M15.71 32H9.5m45 0h-6.21">
+    </path>
+    <path
+        android:fillColor="#FFFF3C00"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeMiterLimit="10"
+        android:pathData="M33.5 39.5c0-3.31 2.69-6 6-6h9c3.31 0 6 2.69 6 6v9c0 3.31-2.69 6-6 6h-9c-3.31 0-6-2.69-6-6z"/>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M42 40.6a3 3 0 0 1 2-0.6 3.26 3.26 0 0 1 2.06 0.55 1.87 1.87 0 0 1 0.7 1.57 1.91 1.91 0 0 1-0.86 1.65 2 2 0 0 1 1.1 1.88 2.12 2.12 0 0 1-0.74 1.72A3.45 3.45 0 0 1 44 48c-2 0-3-0.72-3-2.15A2 2 0 0 1 42.11 44a2 2 0 0 1-0.87-1.78A2 2 0 0 1 42 40.6m3.17 4.83a0.5 0.5 0 0 0-0.09-0.19 0.5 0.5 0 0 0-0.17-0.16L44.7 45a1.6 1.6 0 0 0-0.26-0.1l-0.28-0.07-0.33-0.08-0.35-0.08a1.09 1.09 0 0 0-0.73 1c0 0.55 0.41 0.83 1.24 0.83a1.54 1.54 0 0 0 0.92-0.21 0.72 0.72 0 0 0 0.28-0.62 0.6 0.6 0 0 0-0.04-0.24z m-0.37-3.74a1.3 1.3 0 0 0-0.77-0.2c-0.68 0-1 0.27-1 0.79a0.64 0.64 0 0 0 0.24 0.55 2.3 2.3 0 0 0 0.73 0.32l0.45 0.11a1 1 0 0 0 0.65-1 0.68 0.68 0 0 0-0.32-0.57z"/>
+</vector>

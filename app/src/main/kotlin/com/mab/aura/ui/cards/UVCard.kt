@@ -1,5 +1,7 @@
 package com.mab.aura.ui.cards
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.UVHourSlot
 import com.mab.aura.core.model.UVNow
 import com.mab.aura.core.model.current
@@ -39,11 +43,10 @@ import kotlin.math.max
  * cue, and — when CAMS hourly data is present — a slim band-tinted bar strip showing how the UV actually
  * rises and falls through today, with the live "Ahora" value and the protection window called out above.
  *
- * One Android divergence from the Swift, consistent with the deferred `UVIndex.glyph` in `:core`: the
- * Swift card drew a per-band protection glyph (an SF Symbol escalation, sun → sunglasses → umbrella)
- * beside the band name. The Material *core* icon set carries no such weather glyphs, and the UV
- * complication that glyph taught doesn't exist on Android yet, so it's left out here — the coloured swatch
- * and band name already carry the level. It returns with the icon-set work if a UV widget lands.
+ * The band name carries a glyph beside it, as in the Swift card. iOS escalates a protection metaphor
+ * (sun → sunglasses → beach umbrella → thermometer); Meteocons has no sunglasses/umbrella, so Android uses
+ * Meteocons' own band-coloured numbered UV badge (`uv-index-N`) instead — same information, one visual family
+ * with the rest of the app's glyphs. See [uvGlyph].
  *
  * The scalar readouts above the strip (the live "Ahora" value, today's peak, the protection window) come
  * from [UVNow] in `:core`, so that arithmetic is unit-tested rather than living in the view.
@@ -94,13 +97,25 @@ fun AuraUVCard(
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(
-                            text = uvIndex.bandName,
-                            fontSize = size.bodySize - 1,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            maxLines = 1,
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Meteocons' band-coloured UV badge, the Android stand-in for iOS's per-band
+                            // protection glyph. It carries its own colour, so it's an Image (no tint).
+                            Image(
+                                painter = painterResource(uvGlyph(uvIndex.value)),
+                                contentDescription = null,
+                                modifier = Modifier.size((size.bodySize.value + 2).dp),
+                            )
+                            Text(
+                                text = uvIndex.bandName,
+                                fontSize = size.bodySize - 1,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                maxLines = 1,
+                            )
+                        }
                         Text(
                             text = uvIndex.advice,
                             fontSize = size.smallSize - 1,
@@ -124,6 +139,26 @@ fun AuraUVCard(
             }
         }
     }
+}
+
+/**
+ * The Meteocons UV badge for a WHO index value, `ic_wx_uv_1`…`ic_wx_uv_11` (clamped: a 0 reading borrows the
+ * `1` badge, anything above 11 the `11`). Each badge is a sun already tinted for its band, so it's shown
+ * untinted. This is Android's stand-in for iOS's `UVIndex.glyph` protection symbols.
+ */
+@DrawableRes
+private fun uvGlyph(value: Int): Int = when (value.coerceIn(1, 11)) {
+    1 -> R.drawable.ic_wx_uv_1
+    2 -> R.drawable.ic_wx_uv_2
+    3 -> R.drawable.ic_wx_uv_3
+    4 -> R.drawable.ic_wx_uv_4
+    5 -> R.drawable.ic_wx_uv_5
+    6 -> R.drawable.ic_wx_uv_6
+    7 -> R.drawable.ic_wx_uv_7
+    8 -> R.drawable.ic_wx_uv_8
+    9 -> R.drawable.ic_wx_uv_9
+    10 -> R.drawable.ic_wx_uv_10
+    else -> R.drawable.ic_wx_uv_11
 }
 
 /**

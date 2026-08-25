@@ -1,0 +1,15 @@
+<!--
+    Straight down arrow, the Android stand-in for iOS's SF Symbol "arrow.down" (temperatura mínima,
+    moon-set end of the lunar arc). Counterpart to ic_arrow_up; see that file for why this is a
+    hand-authored vector rather than a material-icons-extended import. White fill; tinted at the call site.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20,12l-1.41,-1.41L13,16.17V4h-2v12.17l-5.58,-5.59L4,12l8,8z"/>
+</vector>

@@ -1,0 +1,58 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:pathData="M32 31.19v14M32 17v2m-6 26.5a3 3 0 0 0 6 0">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="22.66"
+                android:startY="20.66"
+                android:endX="37.25"
+                android:endY="45.94">
+                <item
+                    android:color="#FFD4D7DD"
+                    android:offset="0"/>
+                <item
+                    android:color="#FFD4D7DD"
+                    android:offset=".45"/>
+                <item
+                    android:color="#FFBEC1C6"
+                    android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:strokeColor="#FFEF4444"
+        android:strokeWidth=".5"
+        android:strokeMiterLimit="10"
+        android:pathData="M45.5 33.12c0-8.28-6-15-13.5-15s-13.5 6.72-13.5 15l1.43-0.91a6 6 0 0 1 6.58 0.08l1.24 0.83 0.77-0.54a6 6 0 0 1 7 0l0.77 0.54 1.24-0.83a6 6 0 0 1 6.58-0.08z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="25.63"
+                android:startY="19.89"
+                android:endX="36.33"
+                android:endY="38.42">
+                <item
+                    android:color="#FFF87171"
+                    android:offset="0"/>
+                <item
+                    android:color="#FFF87171"
+                    android:offset=".45"/>
+                <item
+                    android:color="#FFDC2626"
+                    android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:strokeColor="#FFEF4444"
+        android:strokeWidth=".5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M32 18.12s-5 6.63-4.25 15M36.25 33.13c0.75-8.38-4.25-15-4.25-15"/>
+</vector>

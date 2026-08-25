@@ -1,11 +1,13 @@
 package com.mab.aura.ui.cards
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
@@ -117,7 +119,12 @@ fun AuraHeroCard(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 2.dp),
+                // A dark capsule behind the glance, matching iOS: without it a yellow (amarillo) aviso washes
+                // out over a pale midday sky. The pill keeps the level colour legible whatever the art behind it.
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .background(Color.Black.copy(alpha = 0.30f), CircleShape)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Icon(
                     imageVector = Icons.Filled.Warning,

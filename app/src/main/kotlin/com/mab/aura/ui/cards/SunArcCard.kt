@@ -1,6 +1,8 @@
 package com.mab.aura.ui.cards
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,19 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.solar.SolarTimes
 import com.mab.aura.ui.sheets.AuraDetailCard
@@ -40,8 +39,8 @@ import kotlin.math.roundToLong
  * Orto/ocaso come from the snapshot itself (what the rest of the app uses); the civil-twilight times and the
  * day-over-day delta are recomputed at display time from the snapshot's coordinates via [SolarTimes], and
  * simply drop when the snapshot carries no coordinates. See [ArcCard.kt][arcPath] for the shared drawing and
- * the documented Android divergences (no per-shape blur; a chevron stands in for the SF Symbol sunrise/sunset
- * glyph; 24h times until the settings store lands).
+ * the documented Android divergences (no per-shape blur; 24h times until the settings store lands). The orto/
+ * ocaso ends use the Meteocons sunrise/sunset glyphs, the colour counterpart to iOS's `sunrise.fill`/`sunset.fill`.
  */
 @Composable
 fun AuraSunArcCard(
@@ -90,12 +89,12 @@ fun AuraSunArcCard(
                     // Orto on the left, ocaso on the right, each with its civil-twilight time beneath.
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                         SunEnd(
-                            icon = Icons.Filled.KeyboardArrowUp, label = "Orto", time = sunrise,
+                            icon = R.drawable.ic_wx_sunrise, label = "Orto", time = sunrise,
                             civilLabel = "Primera luz", civilTime = solar?.civilDawn, size = size,
                         )
                         Spacer(Modifier.weight(1f))
                         SunEnd(
-                            icon = Icons.Filled.KeyboardArrowDown, label = "Ocaso", time = sunset,
+                            icon = R.drawable.ic_wx_sunset, label = "Ocaso", time = sunset,
                             trailing = true, civilLabel = "Última luz", civilTime = solar?.civilDusk, size = size,
                         )
                     }
@@ -128,10 +127,10 @@ fun AuraSunArcCard(
     }
 }
 
-/** Orto/ocaso end: the chevron + precise time, the label, and (with coordinates) the civil-twilight footnote. */
+/** Orto/ocaso end: the Meteocons sunrise/sunset glyph + precise time, the label, and (with coordinates) the civil-twilight footnote. */
 @Composable
 private fun SunEnd(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     label: String,
     time: Instant?,
     size: AuraSize,
@@ -147,11 +146,13 @@ private fun SunEnd(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
+            // Meteocons sunrise/sunset are already warm-coloured, so they're drawn as an Image (no tint),
+            // unlike the moon arc's monochrome arrows. Sized a touch larger than the old chevron to keep the
+            // horizon-and-rays detail legible.
+            Image(
+                painter = painterResource(icon),
                 contentDescription = null,
-                tint = Palette.tempOrange,
-                modifier = Modifier.size((size.smallSize.value + 2).dp),
+                modifier = Modifier.size((size.bodySize.value + 2).dp),
             )
             Text(
                 text = time?.let(::hhmm) ?: "—",

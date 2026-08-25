@@ -79,6 +79,11 @@ dependencies {
     // shared cache and draws a restricted layout instead of reusing the AuraSky/card Composables.
     implementation(libs.androidx.glance.appwidget)
 
+    // WorkManager: the periodic background refresh (work/*) that keeps the widget's cache current while the
+    // app is closed. WorkManager self-initialises via androidx.startup (the default manifest provider), so no
+    // custom Configuration or Application subclass is needed.
+    implementation(libs.androidx.work.runtime.ktx)
+
     // JVM unit tests for the app-side pure logic (e.g. AuraSunPath position maths). These run on the
     // local JVM with `./gradlew :app:testDebugUnitTest`; no device or Robolectric needed, since the code
     // under test only touches Compose value classes (Offset) and java.time, not the Android framework.

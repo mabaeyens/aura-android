@@ -16,6 +16,7 @@ import com.mab.aura.ui.locations.AddLocationScreen
 import com.mab.aura.ui.locations.LocationsScreen
 import com.mab.aura.ui.settings.SettingsScreen
 import com.mab.aura.ui.theme.AuraTheme
+import com.mab.aura.work.WeatherRefreshScheduler
 
 /** The app's destinations. Hoy is the root; every other screen returns to a statically-known parent (see below). */
 private enum class Screen { Hoy, Settings, Locations, AddLocation }
@@ -34,6 +35,9 @@ private enum class Screen { Hoy, Settings, Locations, AddLocation }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Make sure the background widget refresh is scheduled. Enqueued as unique/KEEP, so this is a no-op
+        // after the first launch and never stacks duplicate work (see WeatherRefreshScheduler).
+        WeatherRefreshScheduler.schedule(this)
         enableEdgeToEdge()
         setContent {
             AuraTheme {

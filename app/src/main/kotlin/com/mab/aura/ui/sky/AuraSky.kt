@@ -3,6 +3,9 @@ package com.mab.aura.ui.sky
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -11,11 +14,16 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.lunar.MoonPhaseMath
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.sky.AuraSunPath as CoreSunPath
@@ -23,12 +31,15 @@ import com.mab.aura.core.sky.SkyCategory
 import com.mab.aura.core.sky.SkyCode
 import com.mab.aura.ui.drawPhasedMoon
 import com.mab.aura.ui.theme.Palette
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -41,13 +52,16 @@ import kotlin.math.sin
  * Position is computed once from the [now] passed in (no timer): recompute it on each appearance/refresh,
  * which is plenty — nobody stares at the screen for a full minute.
  *
- * Two Swift features are intentionally **not** ported here yet:
- * - The **hero image** overlay (`heroImage`/`heroCarriesCondition`/`heroHorizon`/`clampedLight`): the 8×6
- *   art bytes are the separate "Appendix A" problem and aren't in the repo, so there is nothing to draw. The
- *   procedural sky below is the complete, correct fallback the Swift code uses when no hero image is set;
- *   the hero overlay + horizon-clamp lands with those assets.
- * - The Watch surface (this is phone-only). [compact] is kept because the Glance widgets (a later layer)
- *   will pass it to tame the glow on a small card.
+ * The **hero image** overlay is ported: when the [family]'s art has a scene for this sky and time of day
+ * (the WebP grid under `assets/heroes/`, resolved by [HeroBackground] and loaded by [HeroImages]), that
+ * illustrated scene paints the sky and scenery instead of the procedural gradient, and the live sun/moon is
+ * drawn on top clamped to the art's horizon ([HeroBackground.heroHorizon]) so the disc rests in the sky
+ * rather than sinking into the buildings. The art is generated *without* any sun or moon precisely so the
+ * only light that moves is the real one. With no matching art (an unknown sky, or a snapshot with no
+ * coordinates in a family that has no fallback) the procedural sky below is the complete, correct fallback.
+ *
+ * The Watch surface is not ported (this is phone-only). [compact] is kept because the Glance widgets (a
+ * later layer) will pass it to tame the glow on a small card.
  *
  * Android notes for someone coming from SwiftUI:
  * - The whole SwiftUI `ZStack` of layers becomes one Compose [Canvas], drawing each layer in order into a
@@ -63,7 +77,19 @@ fun AuraSky(
     modifier: Modifier = Modifier,
     now: Instant = Instant.now(),
     compact: Boolean = false,
+    family: HeroBackground.Family = HeroBackground.Family.LANDSCAPE,
 ) {
+    // Resolve the hero art for this sky + time of day, then decode it off the main thread. The name maths is
+    // cheap, so it re-runs freely; only the decode is guarded (keyed on the resolved name), so an unchanged
+    // scene never re-decodes. A null name (unknown sky, or no art for this family) leaves the sky procedural.
+    val context = LocalContext.current
+    val available = remember(context) { HeroImages.availableNames(context) }
+    val heroName = snapshot?.let { HeroBackground.resolve(it, now, family, available) }
+    val hero by produceState<ImageBitmap?>(initialValue = null, heroName) {
+        value = heroName?.let { name -> withContext(Dispatchers.IO) { HeroImages.load(context, name) } }
+    }
+    val heroHorizon = HeroBackground.heroHorizon(family).toFloat()
+
     val path = AuraSunPath.from(now, snapshot?.sunrise, snapshot?.sunset)
     val category = SkyCode.classify(snapshot?.currentSky).category
     val veil = veil(category)                       // how much cloud dulls the light, 0…1
@@ -81,6 +107,7 @@ fun AuraSky(
 
     // The graphics layer that blurs + fades the sun/moon disc as one group (see the class doc).
     val discLayer = rememberGraphicsLayer()
+    val heroBmp = hero
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
@@ -92,25 +119,37 @@ fun AuraSky(
         val lowSun = (0.62 + 0.38 * path.altitude).toFloat()
         val discBase = if (compact) min(min(w, h) * 0.07f, 20f) else min(min(w, h) * 0.075f, 32f)
         val discR = discBase * lowSun
-        // No hero image (yet) → the light sits at the true solar path point, no horizon clamp.
-        val centre = Offset(path.point.x * w, path.point.y * h)
-
-        // 1 — the sky itself: the procedural top-to-bottom gradient that tracks the hour.
-        drawRect(brush = Brush.verticalGradient(listOf(base.first, base.second)))
-
-        // 2 — the cloud veil: a soft, slightly cool scrim that greys the sky as it clouds over. A
-        // neutral-cool grey (not warm) keeps an overcast noon from reading muddy/brown.
-        if (veil > 0.0) {
-            val veilColor = if (path.isNight) Color(0.12f, 0.12f, 0.12f) else Color(0.60f, 0.65f, 0.72f)
-            drawRect(color = veilColor.copy(alpha = (veil * 0.5).toFloat()))
+        // With a hero scene the light is clamped so it never drops below the art's horizon into the buildings
+        // (the Swift `clampedLight`): the disc rests just in the sky. Procedural sky uses the true path point.
+        val centre = if (heroBmp != null) {
+            Offset(path.point.x * w, min(path.point.y * h, heroHorizon * h))
+        } else {
+            Offset(path.point.x * w, path.point.y * h)
         }
 
-        // 2.5 — night dim: a subtle darkening so night reads as night, not dusk. Deepest at the middle of
-        // the night (moon highest), gentle toward dawn and dusk. It sits *under* the moon glow, so the
-        // moonlit pool still lifts back out of it; kept light so it never crushes the scene to black.
-        if (path.isNight) {
-            val nightDim = (0.10 + path.altitude * 0.12).toFloat()   // ~0.10 at the edges → ~0.22 at midnight
-            drawRect(color = Color(0.02f, 0.03f, 0.09f).copy(alpha = nightDim))
+        if (heroBmp != null) {
+            // 1 (hero) — the illustrated scene fills the sky *and* the scenery, so it stands in for the
+            // procedural gradient, veil, night-dim and vector scenery all at once. Only the live light and
+            // any precipitation draw over it.
+            drawHeroCover(heroBmp)
+        } else {
+            // 1 — the sky itself: the procedural top-to-bottom gradient that tracks the hour.
+            drawRect(brush = Brush.verticalGradient(listOf(base.first, base.second)))
+
+            // 2 — the cloud veil: a soft, slightly cool scrim that greys the sky as it clouds over. A
+            // neutral-cool grey (not warm) keeps an overcast noon from reading muddy/brown.
+            if (veil > 0.0) {
+                val veilColor = if (path.isNight) Color(0.12f, 0.12f, 0.12f) else Color(0.60f, 0.65f, 0.72f)
+                drawRect(color = veilColor.copy(alpha = (veil * 0.5).toFloat()))
+            }
+
+            // 2.5 — night dim: a subtle darkening so night reads as night, not dusk. Deepest at the middle of
+            // the night (moon highest), gentle toward dawn and dusk. It sits *under* the moon glow, so the
+            // moonlit pool still lifts back out of it; kept light so it never crushes the scene to black.
+            if (path.isNight) {
+                val nightDim = (0.10 + path.altitude * 0.12).toFloat()   // ~0.10 edges → ~0.22 at midnight
+                drawRect(color = Color(0.02f, 0.03f, 0.09f).copy(alpha = nightDim))
+            }
         }
 
         // 3 — the light: a warm (or cool, at night) glow centred exactly where the sun/moon is. Day glow
@@ -201,21 +240,46 @@ fun AuraSky(
             drawLayer(discLayer)
         }
 
-        // 4 — stars, night only. Condition is the main driver (clear nights show the most, cloud hides
-        // them) and a bright moon washes a few more out (new moon: none lost; full: about a third).
-        if (path.isNight) {
+        // 4 — stars, night only, and only on the procedural sky. A night hero carries its own painted sky,
+        // so drawing procedural stars over it would double up. Condition is the main driver (clear nights
+        // show the most, cloud hides them) and a bright moon washes a few more out.
+        if (heroBmp == null && path.isNight) {
             val starAlpha = ((1 - veil * 0.8) * (1 - moonIllum * 0.35)).toFloat()
             if (starAlpha > 0.01f) drawStars(starAlpha)
         }
 
-        // 5 — the flat vector scenery along the horizon: mountains, hills, a sun-lit river, and trees whose
-        // shadows lean away from the sun.
-        drawScenery(scene, sunX = path.point.x)
+        // 5 — the flat vector scenery along the horizon (mountains, hills, a sun-lit river, trees). Skipped
+        // under a hero, whose art already contains its own, far richer scenery.
+        if (heroBmp == null) drawScenery(scene, sunX = path.point.x)
 
         // 6 — precipitation. Static rain streaks (heavier for a storm) or snow flecks, so the sky matches
         // its own condition. Only rain/storm/snow fall; the rest are just cloud, handled by the veil.
         if (precipKind != null) drawPrecip(precipKind)
     }
+}
+
+/**
+ * Draw the hero scene to *cover* the canvas: scaled up until it fills both axes, centred, with the overflow
+ * cropped (the CSS `background-size: cover` behaviour). The portrait art (~9:19.5) and a phone screen (~9:20)
+ * are near-identical in aspect, so in practice this fills the height and trims a sliver of width, keeping the
+ * whole sky-to-scenery composition visible.
+ */
+private fun DrawScope.drawHeroCover(image: ImageBitmap) {
+    val bw = image.width.toFloat()
+    val bh = image.height.toFloat()
+    if (bw <= 0f || bh <= 0f) return
+    val scale = max(size.width / bw, size.height / bh)
+    val dw = (bw * scale).roundToInt()
+    val dh = (bh * scale).roundToInt()
+    val left = ((size.width - dw) / 2f).roundToInt()
+    val top = ((size.height - dh) / 2f).roundToInt()
+    drawImage(
+        image = image,
+        srcOffset = IntOffset.Zero,
+        srcSize = IntSize(image.width, image.height),
+        dstOffset = IntOffset(left, top),
+        dstSize = IntSize(dw, dh),
+    )
 }
 
 // MARK: - Sun / moon position

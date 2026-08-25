@@ -65,6 +65,17 @@ class Settings(context: Context) {
         store.edit { it[USE_24H] = value }
     }
 
+    /**
+     * Which hero-art family paints the sky: "LANDSCAPE" (default) or "CITYSCAPE", the two 48-image grids.
+     * Stored as the `HeroBackground.Family` enum name; an unknown value decodes back to LANDSCAPE. Mirrors
+     * the iOS `@AppStorage("heroFamily")` default (`.landscape`).
+     */
+    val heroFamily: Flow<String> = store.data.map { it[HERO_FAMILY] ?: "LANDSCAPE" }
+
+    suspend fun setHeroFamily(value: String) {
+        store.edit { it[HERO_FAMILY] = value }
+    }
+
     private fun decodeFavourites(raw: String): List<Location> =
         runCatching { json.decodeFromString<List<Location>>(raw) }.getOrDefault(emptyList())
 
@@ -72,6 +83,7 @@ class Settings(context: Context) {
         val ACTIVE_INE = stringPreferencesKey("active_ine")
         val FAVOURITES = stringPreferencesKey("favourites_json")
         val USE_24H = booleanPreferencesKey("use_24h")
+        val HERO_FAMILY = stringPreferencesKey("hero_family")
 
         val json = Json { ignoreUnknownKeys = true }
     }

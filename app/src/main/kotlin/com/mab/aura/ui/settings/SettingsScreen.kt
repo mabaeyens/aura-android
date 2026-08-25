@@ -38,11 +38,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.core.hero.HeroBackground
 
 /**
- * "Ajustes" — enter the AEMET key and choose the clock format. Android port of `SettingsView.swift`, pared to
- * what the port actually wires today: the key entry and the 24 h / 12 h toggle. The iOS sky-family picker
- * (no cityscape art yet) and Notificaciones (no notification path ported) are deliberately left out.
+ * "Ajustes" — enter the AEMET key, choose the clock format, and pick the sky-art family. Android port of
+ * `SettingsView.swift`, pared to what the port wires today: key entry, the 24 h / 12 h toggle, and the
+ * Paisaje / Ciudad hero picker. Notificaciones (no notification path ported) is deliberately left out.
  *
  * Unlike the "Hoy" screen, this is an ordinary Material 3 [Scaffold] with a top bar and the theme surface
  * behind it — a settings list wants the standard, legible chrome, not the full-bleed sky. [onBack] is the
@@ -55,6 +56,7 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val apiKeyPresent by viewModel.apiKeyPresent.collectAsStateWithLifecycle()
     val justSaved by viewModel.justSaved.collectAsStateWithLifecycle()
     val use24h by viewModel.use24h.collectAsStateWithLifecycle()
+    val heroFamily by viewModel.heroFamily.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier,
@@ -85,6 +87,8 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             )
             HorizontalDivider()
             ClockSection(use24h = use24h, onChange = viewModel::setUse24h)
+            HorizontalDivider()
+            HeroFamilySection(family = heroFamily, onChange = viewModel::setHeroFamily)
             HorizontalDivider()
             AboutSection()
         }
@@ -170,6 +174,31 @@ private fun ClockSection(use24h: Boolean, onChange: (Boolean) -> Unit) {
     }
     Text(
         text = "Elige entre 24 horas (14:30) y 12 horas con AM/PM (2:30 PM). Se aplica en toda la app.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** The hero-art family: Paisaje (landscape) or Ciudad (cityscape), the two illustrated sky sets. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HeroFamilySection(family: HeroBackground.Family, onChange: (HeroBackground.Family) -> Unit) {
+    SectionHeader("Fondo del cielo")
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SegmentedButton(
+            selected = family == HeroBackground.Family.LANDSCAPE,
+            onClick = { onChange(HeroBackground.Family.LANDSCAPE) },
+            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+        ) { Text("Paisaje") }
+        SegmentedButton(
+            selected = family == HeroBackground.Family.CITYSCAPE,
+            onClick = { onChange(HeroBackground.Family.CITYSCAPE) },
+            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+        ) { Text("Ciudad") }
+    }
+    Text(
+        text = "Elige la ilustración del cielo: un paisaje natural o una ciudad. El sol y la luna se dibujan " +
+            "encima en su posición real.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -3,12 +3,14 @@ package com.mab.aura.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.store.SecretStore
 import com.mab.aura.store.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -41,6 +43,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     val use24h: StateFlow<Boolean> =
         settings.use24h.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    /** The stored hero-art family (Paisaje / Ciudad), decoded from the setting string; landscape by default. */
+    val heroFamily: StateFlow<HeroBackground.Family> = settings.heroFamily
+        .map { HeroBackground.Family.from(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HeroBackground.Family.LANDSCAPE)
+
     /** Store (or replace) the AEMET key. A blank string clears it (see [SecretStore.setApiKey]). */
     fun saveKey(key: String) {
         secretStore.setApiKey(key)
@@ -58,5 +65,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     /** Persist the 24 h / 12 h choice; the DataStore write flows back to [use24h] and to AuraTime. */
     fun setUse24h(value: Boolean) {
         viewModelScope.launch { settings.setUse24h(value) }
+    }
+
+    /** Persist the hero-art family; the write flows back to [heroFamily] and to the "Hoy" sky on return. */
+    fun setHeroFamily(family: HeroBackground.Family) {
+        viewModelScope.launch { settings.setHeroFamily(family.name) }
     }
 }

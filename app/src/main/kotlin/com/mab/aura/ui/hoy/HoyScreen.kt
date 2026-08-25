@@ -61,6 +61,7 @@ fun HoyScreen(
 ) {
     val viewModel: HoyViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val heroFamily by viewModel.heroFamily.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Returning from Ajustes after a key was just entered: retry the fetch the no-key state was blocking.
@@ -91,7 +92,7 @@ fun HoyScreen(
         // The sky backdrop follows the shown snapshot (null → a neutral high-noon sky), so even the loading
         // and no-key states sit over a real sky rather than a blank surface.
         val backdrop = (state as? HoyUiState.Content)?.snapshot
-        AuraSky(snapshot = backdrop, modifier = Modifier.fillMaxSize(), now = now)
+        AuraSky(snapshot = backdrop, modifier = Modifier.fillMaxSize(), now = now, family = heroFamily)
 
         when (val s = state) {
             HoyUiState.Loading -> CenteredMessage {

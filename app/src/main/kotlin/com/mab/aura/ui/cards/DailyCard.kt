@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mab.aura.core.model.DaySnapshot
-import com.mab.aura.ui.ConditionGlyph
+import com.mab.aura.ui.AnimatedConditionGlyph
 import com.mab.aura.ui.theme.Palette
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -38,8 +38,9 @@ import kotlin.math.max
  * day's, the way Apple Weather charts a week.
  *
  * The glyph's day/night is read off the sky code's own "n" suffix (as [AuraHourlyCard] does), since
- * [ConditionGlyph] takes an explicit flag where the Swift symbol lookup read the code directly. The glyph is
- * full-colour Meteocons art now, so it carries its own fills and needs no content colour set around it.
+ * [AnimatedConditionGlyph] takes an explicit flag where the Swift symbol lookup read the code directly. The
+ * glyph is the animated Meteocons art (the same set the hourly strip plays), so it carries its own fills and
+ * needs no content colour; it falls back to the static glyph for any condition without an animation.
  */
 @Composable
 fun AuraDailyCard(
@@ -73,7 +74,7 @@ fun AuraDailyCard(
                             verticalArrangement = Arrangement.spacedBy(1.dp),
                             modifier = Modifier.width(40.dp),
                         ) {
-                            ConditionGlyph(
+                            AnimatedConditionGlyph(
                                 sky = d.sky,
                                 isNight = d.sky?.endsWith("n") == true,
                                 slot = size.iconSize,

@@ -43,7 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mab.aura.ui.ConditionGlyph
+import com.mab.aura.ui.AnimatedConditionGlyph
 
 /**
  * "Ayuda" — the reference screen ported from `HelpView.swift`. It does two jobs: explain how to get a free
@@ -53,7 +53,8 @@ import com.mab.aura.ui.ConditionGlyph
  * What differs from the iOS screen, and why: the metric-card rows on iOS use SF Symbols (humidity, umbrella,
  * sunrise, the UV badges…). This project ships only `material-icons-core` on purpose, which has none of those,
  * and I don't want to pull in the large extended icon set just for a legend. So the sky-condition legend uses
- * the app's real [ConditionGlyph] (identical to the cards, can't drift), the navigation legend uses the core
+ * the app's real [AnimatedConditionGlyph] (identical to the cards, can't drift, and it plays the animated
+ * Meteocons so the legend previews exactly what the forecast shows), the navigation legend uses the core
  * icons the app already shows, and the per-metric cards are described in words rather than with a stand-in
  * icon. The colour scales aren't repeated here: each card opens its own on a tap, and this points there.
  */
@@ -238,9 +239,9 @@ private fun Step(n: Int, text: String) {
     }
 }
 
-/** A legend row whose glyph is a weather condition, drawn by the same [ConditionGlyph] the cards use so the
- *  legend can't drift. Each rides a small day/night sky tile, since Aura's clouds are near-white and would
- *  vanish on the plain surface. */
+/** A legend row whose glyph is a weather condition, drawn by the same [AnimatedConditionGlyph] the cards use
+ *  so the legend can't drift. Each rides a small day/night sky tile, since Aura's clouds are near-white and
+ *  would vanish on the plain surface. */
 @Composable
 private fun ConditionRow(code: String, night: Boolean, title: String) {
     Row(
@@ -254,7 +255,7 @@ private fun ConditionRow(code: String, night: Boolean, title: String) {
                 .background(skyTile(night)),
             contentAlignment = Alignment.Center,
         ) {
-            ConditionGlyph(sky = code, isNight = night, modifier = Modifier.size(22.dp))
+            AnimatedConditionGlyph(sky = code, isNight = night, modifier = Modifier.size(22.dp))
         }
         Text(text = title, style = MaterialTheme.typography.bodyMedium)
     }

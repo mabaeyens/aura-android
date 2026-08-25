@@ -3,10 +3,13 @@ package com.mab.aura.ui.hoy
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mab.aura.core.geo.SpainCities
 import com.mab.aura.core.model.Location
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.time.AuraTime
 import com.mab.aura.data.WeatherRepository
+import com.mab.aura.location.LocationProvider
+import com.mab.aura.location.LocationResult
 import com.mab.aura.store.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = WeatherRepository(app)
     private val settings = Settings(app)
+    private val locationProvider = LocationProvider(app)
 
     private val _state = MutableStateFlow<HoyUiState>(HoyUiState.Loading)
     val state: StateFlow<HoyUiState> = _state.asStateFlow()
@@ -67,17 +71,32 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * The location to show: the active favourite, else the first favourite, else a seeded Madrid so the very
-     * first launch (no favourites yet) still has real weather to render. A favourites/add-location UI and
-     * device-location resolution are later steps; this keeps the first screen live in the meantime.
+     * The location to show, in order of preference: the active favourite, else the first favourite, else the
+     * seed city nearest the device's current position, else a seeded Madrid as a last resort (no favourites,
+     * no usable fix). A saved favourite always wins over the device fix, matching iOS — GPS only seeds the
+     * picker. The favourites/add-location UI is still a later step; this keeps the first screen live.
      */
     private suspend fun resolveLocation(): Location {
         val favourites = settings.favourites.first()
         val activeIne = settings.activeINE.first()
         return favourites.firstOrNull { it.ine == activeIne }
             ?: favourites.firstOrNull()
+            ?: deviceNearestCity()
             ?: DEFAULT_MADRID
     }
+
+    /**
+     * The seed city nearest the device's current position, or null when there is no usable fix (permission
+     * not granted, location services off, or no fix). The screen owns the permission *request*; this only
+     * reads whatever grant is in place. Android port of `LocationManager.resolveNearestCity` — GPS resolves
+     * to the closest bundled municipality until the full INE table ships.
+     */
+    private suspend fun deviceNearestCity(): Location? =
+        when (val result = locationProvider.current()) {
+            is LocationResult.Available ->
+                SpainCities.nearest(result.coordinate.latitude, result.coordinate.longitude)
+            else -> null
+        }
 
     private companion object {
         val DEFAULT_MADRID = Location(

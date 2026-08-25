@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
+      Network access for every data source (AEMET OpenData, MITECO air quality, Open-Meteo UV). INTERNET is a
+      normal, install-time permission (no runtime prompt); without it okhttp fails at DNS with a SecurityException.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
       Coarse location only: enough to key the forecast to a municipality and compute sun times, and it lets
       Aura use the AOSP network/fused providers, which honour a coarse grant. FINE (GPS) is deliberately not
       requested unless a coarse fix proves too imprecise (see specs/location.md). No Google Play Services.

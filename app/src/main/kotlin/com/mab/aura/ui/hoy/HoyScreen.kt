@@ -6,19 +6,33 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mab.aura.core.model.WeatherSnapshot
@@ -38,9 +52,38 @@ import java.time.Instant
  * no-key / error states, all over a sky backdrop so the screen never flashes a bare surface.
  */
 @Composable
-fun HoyScreen(modifier: Modifier = Modifier, now: Instant = Instant.now()) {
+fun HoyScreen(
+    modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
+    now: Instant = Instant.now(),
+) {
     val viewModel: HoyViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Returning from Ajustes after a key was just entered: retry the fetch the no-key state was blocking.
+    // The effect re-runs each time the screen re-enters composition (i.e. on every return from Settings).
+    LaunchedEffect(Unit) {
+        if (viewModel.state.value is HoyUiState.NeedsApiKey) viewModel.load()
+    }
+
+    // Coarse-location prompt. Android splits acquisition (LocationProvider) from the *request* UI, which is
+    // the screen's job. Until the favourites/add-location UI exists, Hoy is the only place that can ask, and
+    // the nearest-city resolution needs it. Ask once, only after we have working weather (a key is present),
+    // so the very first no-key screen isn't fronted by a location dialog; on grant, reload to use the fix.
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) viewModel.load() }
+    var permissionAsked by rememberSaveable { mutableStateOf(false) }
+    val hasWeather = state is HoyUiState.Content
+    LaunchedEffect(hasWeather) {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (hasWeather && !permissionAsked && !granted) {
+            permissionAsked = true
+            locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         // The sky backdrop follows the shown snapshot (null → a neutral high-noon sky), so even the loading
@@ -56,8 +99,8 @@ fun HoyScreen(modifier: Modifier = Modifier, now: Instant = Instant.now()) {
             HoyUiState.NeedsApiKey -> CenteredMessage {
                 Message(
                     title = "Añade tu clave de AEMET",
-                    body = "Aura necesita una clave de la API de AEMET para mostrar el tiempo. La entrada de " +
-                        "la clave llega con la pantalla de Ajustes.",
+                    body = "Aura necesita una clave de la API de AEMET para mostrar el tiempo. Ábrela con el " +
+                        "engranaje de arriba a la derecha y pégala en Ajustes.",
                 )
             }
 
@@ -72,6 +115,18 @@ fun HoyScreen(modifier: Modifier = Modifier, now: Instant = Instant.now()) {
                     Button(onClick = { viewModel.load() }) { Text("Reintentar") }
                 }
             }
+        }
+
+        // The one bit of chrome over the sky: a settings gear, top-right, clear of the status bar. White to
+        // read against the sky, like the rest of the overlaid text.
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .safeDrawingPadding()
+                .padding(4.dp),
+        ) {
+            Icon(Icons.Filled.Settings, contentDescription = "Ajustes", tint = Color.White)
         }
     }
 }

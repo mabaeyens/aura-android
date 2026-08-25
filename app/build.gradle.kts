@@ -84,6 +84,10 @@ dependencies {
     // custom Configuration or Application subclass is needed.
     implementation(libs.androidx.work.runtime.ktx)
 
+    // Lottie for Compose: plays the Meteocons animated weather icons (res/raw/wx_anim_*.json) in the hourly
+    // strip. App-only; the Glance widget can't animate (RemoteViews), so it keeps the static drawables.
+    implementation(libs.lottie.compose)
+
     // JVM unit tests for the app-side pure logic (e.g. AuraSunPath position maths). These run on the
     // local JVM with `./gradlew :app:testDebugUnitTest`; no device or Robolectric needed, since the code
     // under test only touches Compose value classes (Offset) and java.time, not the Android framework.

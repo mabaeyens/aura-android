@@ -12,10 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,8 +38,8 @@ import kotlin.math.max
  * day's, the way Apple Weather charts a week.
  *
  * The glyph's day/night is read off the sky code's own "n" suffix (as [AuraHourlyCard] does), since
- * [ConditionGlyph] takes an explicit flag where the Swift symbol lookup read the code directly. Neutral
- * glyphs render white via [LocalContentColor]; the glyph's own special cases still win.
+ * [ConditionGlyph] takes an explicit flag where the Swift symbol lookup read the code directly. The glyph is
+ * full-colour Meteocons art now, so it carries its own fills and needs no content colour set around it.
  */
 @Composable
 fun AuraDailyCard(
@@ -75,13 +73,11 @@ fun AuraDailyCard(
                             verticalArrangement = Arrangement.spacedBy(1.dp),
                             modifier = Modifier.width(40.dp),
                         ) {
-                            CompositionLocalProvider(LocalContentColor provides Color.White) {
-                                ConditionGlyph(
-                                    sky = d.sky,
-                                    isNight = d.sky?.endsWith("n") == true,
-                                    slot = size.iconSize,
-                                )
-                            }
+                            ConditionGlyph(
+                                sky = d.sky,
+                                isNight = d.sky?.endsWith("n") == true,
+                                slot = size.iconSize,
+                            )
                             // Always render the precip line (a blank when there's no meaningful chance) so
                             // every row is exactly the same height, rain or not.
                             Text(

@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mab.aura.core.model.HourSlot
-import com.mab.aura.ui.ConditionGlyph
+import com.mab.aura.ui.AnimatedConditionGlyph
 import com.mab.aura.ui.theme.Palette
 
 /**
@@ -37,8 +35,8 @@ import com.mab.aura.ui.theme.Palette
  *    sun don't knock the temperature row out of line.
  * 2. **Glyph day/night from the code.** SwiftUI drew a multicolour SF Symbol straight from the sky code.
  *    [ConditionGlyph] takes an explicit `isNight`, so it's read back off the code's own "n" suffix here,
- *    matching what the Swift symbol lookup did. Neutral glyphs render white via [LocalContentColor]; the
- *    glyph's own special cases (the night moon's blue, the forced-white snowflake) still win.
+ *    matching what the Swift symbol lookup did. The strip plays the animated Meteocons glyph via
+ *    [AnimatedConditionGlyph]; it is full-colour, so no content colour is set around it.
  *
  * [scrolls] mirrors the Swift flag: on device (`true`) the strip scrolls; off (`false`) the first five hours
  * spread edge to edge, for the offline render path that can't lay out a horizontal scroll.
@@ -99,14 +97,13 @@ private fun HourColumn(
             color = Color.White.copy(alpha = 0.75f),
             textAlign = TextAlign.Center,
         )
-        // Neutral glyphs read white; ConditionGlyph still forces the night moon blue and the snowflake white.
-        CompositionLocalProvider(LocalContentColor provides Color.White) {
-            ConditionGlyph(
-                sky = h.sky,
-                isNight = h.sky?.endsWith("n") == true,
-                slot = size.iconSize + 6.dp,
-            )
-        }
+        // The hourly strip plays the animated Meteocons glyphs (colour, in motion); any condition without an
+        // animated asset falls back to the static colour glyph. Both carry their own fills, so no tint here.
+        AnimatedConditionGlyph(
+            sky = h.sky,
+            isNight = h.sky?.endsWith("n") == true,
+            slot = size.iconSize + 6.dp,
+        )
         Text(
             text = h.temp?.let { "$it°" } ?: "—",
             fontSize = size.bodySize - 2,

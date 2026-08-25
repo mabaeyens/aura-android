@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -229,10 +228,12 @@ private fun HourColumn(slot: HourSlot, use24h: Boolean, showRain: Boolean, modif
             maxLines = 1,
         )
         Spacer(GlanceModifier.height(3.dp))
+        // No colorFilter: the Meteocons drawables are full-colour (yellow sun, blue rain), so tinting them
+        // would flatten the art to a white silhouette. The widget can't animate (RemoteViews), so it shows
+        // the static Meteocons here while the in-app strip plays the matching Lottie.
         Image(
             provider = ImageProvider(drawableFor(glyph)),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(White),
             modifier = GlanceModifier.size(20.dp),
         )
         Spacer(GlanceModifier.height(3.dp))

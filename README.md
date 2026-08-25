@@ -42,4 +42,6 @@ Phone only. No Wear OS and no tablet layout, by design. The Home Screen widget (
 
 ## Attribution
 
+Weather data from AEMET OpenData, with air quality from MITECO and the UV curve from Copernicus (CAMS, via Open-Meteo) where shown. Weather icons are [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, used under the MIT licence.
+
 Built with the help of Claude Code.

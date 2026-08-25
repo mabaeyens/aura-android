@@ -71,19 +71,25 @@
             </aapt:attr>
         </path>
         <path
-            android:strokeColor="#FF0A5AD4"
-            android:strokeWidth="4"
-            android:strokeLineCap="round"
-            android:pathData="M52 87V90"/>
-        <path
-            android:strokeColor="#FF0A5AD4"
-            android:strokeWidth="4"
-            android:strokeLineCap="round"
-            android:pathData="M64 87V90"/>
-        <path
-            android:strokeColor="#FF0A5AD4"
-            android:strokeWidth="4"
-            android:strokeLineCap="round"
-            android:pathData="M76 87V90"/>
+            android:strokeColor="#FFF6A823"
+            android:strokeWidth="1"
+            android:strokeMiterLimit="10"
+            android:pathData="M71.17 68.5L63.56 83.04 63.17 83.77H75L56.95 107.89 60.49 91.01 60.62 90.41H52.7L60.36 68.5H71.17Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="64.53"
+                    android:startY="66.04"
+                    android:endX="84.41"
+                    android:endY="77.46">
+                    <item
+                        android:color="#FFF7B23B"
+                        android:offset="0"/>
+                    <item
+                        android:color="#FFF6A823"
+                        android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
     </group>
 </vector>

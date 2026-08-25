@@ -176,6 +176,22 @@ private fun RadarCardPreview() {
     }
 }
 
+@Preview(name = "Sun arc card", widthDp = 380)
+@Composable
+private fun SunArcCardPreview() {
+    SkyPanel {
+        AuraSunArcCard(snapshot = sampleSnapshot, size = AuraSize.Phone, now = previewNow)
+    }
+}
+
+@Preview(name = "Moon arc card", widthDp = 380)
+@Composable
+private fun MoonArcCardPreview() {
+    SkyPanel {
+        AuraMoonArcCard(snapshot = sampleSnapshot, size = AuraSize.Phone, now = previewNow)
+    }
+}
+
 // One representative snapshot the three forecast cards read from: a warm, mostly clear Madrid afternoon
 // with a passing shower later, six days ahead, and a low sun so the hero shows a real moment label.
 private val sampleSnapshot = WeatherSnapshot(
@@ -196,6 +212,10 @@ private val sampleSnapshot = WeatherSnapshot(
     // as "Mediodía"/"Tarde".
     sunrise = Instant.parse("2026-08-25T05:00:00Z"),
     sunset = Instant.parse("2026-08-25T19:15:00Z"),
+    // Madrid, so the sun/moon arc cards can solve civil twilight, the day-over-day delta and the moon's
+    // own salida/puesta from real coordinates.
+    latitude = 40.4168,
+    longitude = -3.7038,
     hours = listOf(
         HourSlot(hour = 14, temp = 31, sky = "12", precipProb = 0),
         HourSlot(hour = 15, temp = 32, sky = "12", precipProb = 0),

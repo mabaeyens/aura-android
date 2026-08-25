@@ -9,11 +9,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.mab.aura.core.time.AuraTime
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -126,12 +124,10 @@ internal fun DrawScope.drawArcGlow(center: Offset, glyphR: Float, color: Color, 
     )
 }
 
-// 24h HH:mm in es-ES. The 12/24h preference moves here once the settings store lands (Layer D); until then
-// this follows the Spanish 24h convention, like the other cards.
-private val hhmmFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("HH:mm", Locale("es", "ES")).withZone(ZoneId.systemDefault())
-
-internal fun hhmm(instant: Instant): String = hhmmFormatter.format(instant)
+// The shared wall-clock formatter now lives in :core's AuraTime (Layer D), which carries the 12/24h
+// preference; this delegates so the arc cards and the Sol/Luna sheets follow the toggle once :app wires
+// the setting up. Kept as an `internal` alias so the existing `hhmm(...)` call sites don't churn.
+internal fun hhmm(instant: Instant): String = AuraTime.hhmm(instant)
 
 /**
  * Compact "3 h 12 min" / "43 min". [wrapDay] adds 24 h to a negative span (so this morning's orto stands in

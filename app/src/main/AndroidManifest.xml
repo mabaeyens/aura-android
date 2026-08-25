@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      Coarse location only: enough to key the forecast to a municipality and compute sun times, and it lets
+      Aura use the AOSP network/fused providers, which honour a coarse grant. FINE (GPS) is deliberately not
+      requested unless a coarse fix proves too imprecise (see specs/location.md). No Google Play Services.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:label="@string/app_name"

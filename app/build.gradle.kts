@@ -55,5 +55,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // The core Material Symbols set only (Warning, chevrons for the cards). Not the large
+    // material-icons-extended artifact. Version comes from the Compose BOM above.
+    implementation(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

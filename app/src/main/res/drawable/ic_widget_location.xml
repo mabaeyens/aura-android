@@ -1,0 +1,15 @@
+<!--
+  The filled navigation arrow shown before the place name on the widget, the Android stand-in for the
+  iOS "location.fill" SF Symbol. White so it needs no tint over the widget's dark scrim (Glance can
+  rasterise a vector drawable but can't reach the app's Compose Icons, so the widget carries its own).
+  Standard Material "near_me" path on a 24dp viewport.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M21,3L3,10.53v0.98l6.84,2.65L12.48,21h0.98L21,3z" />
+</vector>

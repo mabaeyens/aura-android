@@ -30,24 +30,28 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.mab.aura.MainActivity
+import com.mab.aura.R
 import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.icon.WeatherIcon
 import com.mab.aura.core.model.HourSlot
+import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
-import com.mab.aura.core.time.AuraTime
 import com.mab.aura.store.Settings
 import com.mab.aura.ui.drawableFor
+import com.mab.aura.ui.theme.Palette
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 
@@ -78,13 +82,13 @@ class AuraGlanceWidget : GlanceAppWidget() {
         // wide hero scene for this sky + time of day, falling back to the procedural sky gradient.
         val settings = Settings(context)
         val snapshot = SharedSnapshot.resolve(context, pinnedINE)
-        val use24h = settings.use24h.first()
+        val now = Instant.now()
         val family = HeroBackground.Family.from(settings.heroFamily.first())
-        val hero = snapshot?.let { wideHeroBitmap(context, it, Instant.now(), family) }
+        val hero = snapshot?.let { wideHeroBitmap(context, it, now, family) }
         val background = hero ?: snapshot?.let { skyGradientBitmap(it.currentSky) }
 
         provideContent {
-            WidgetContent(snapshot, background, backgroundIsHero = hero != null, use24h = use24h)
+            WidgetContent(snapshot, background, backgroundIsHero = hero != null, now = now)
         }
     }
 }
@@ -100,17 +104,12 @@ private val White = ColorProvider(Color.White)
 private val WhiteDim = ColorProvider(Color(0xE6FFFFFF))
 private val WhiteFaint = ColorProvider(Color(0xCCFFFFFF))
 
-// The tile is tall enough to carry the hourly strip below the summary from about here up (a 2x2 tile is
-// ~110 dp and stays compact; a taller/medium tile gets the strip). Set with headroom so the strip's last
-// row never clips at the boundary.
-private val HOURS_MIN_HEIGHT = 190.dp
-
 @Composable
 private fun WidgetContent(
     snapshot: WeatherSnapshot?,
     background: Bitmap?,
     backgroundIsHero: Boolean,
-    use24h: Boolean,
+    now: Instant,
 ) {
     // The whole widget opens the app, matching the iOS tap target. actionStartActivity's Intent overload is
     // unambiguous (the reified generic collides with it here), so build the launch Intent explicitly.
@@ -143,98 +142,184 @@ private fun WidgetContent(
         Box(GlanceModifier.fillMaxSize().background(ColorProvider(Color(scrim)))) {}
 
         // 3 — the content, or the empty invitation before anything is cached.
-        if (snapshot == null) EmptyContent() else FilledContent(snapshot, use24h)
+        if (snapshot == null) EmptyContent() else FilledContent(snapshot, now)
     }
 }
 
+/**
+ * The filled widget, laid out to match the iOS Home Screen widget:
+ *
+ *  - a **wide/medium** tile (a 4x2 and up) puts the condition block on the left and a four-hour strip on
+ *    the right, side by side, the way `AuraHomeMedium` does on iOS;
+ *  - a **compact** 2x2 tile keeps just the condition block, sat against the bottom like `AuraHomeSmall`.
+ *
+ * The height guard keeps the very short 4x1 tile — too shallow for the tall block beside a strip — on the
+ * compact path rather than clipping the temperature.
+ */
 @Composable
-private fun FilledContent(snapshot: WeatherSnapshot, use24h: Boolean) {
-    val temp = snapshot.heroTemp?.let { "$it°" } ?: "--°"
-    val hiLo = listOfNotNull(
-        snapshot.tempMax?.let { "Máx $it°" },
-        snapshot.tempMin?.let { "Mín $it°" },
-    ).joinToString(" · ")
-    val hours = snapshot.upcomingHours().take(4)
-    val showHours = LocalSize.current.height >= HOURS_MIN_HEIGHT && hours.isNotEmpty()
+private fun FilledContent(snapshot: WeatherSnapshot, now: Instant) {
+    val size = LocalSize.current
+    val medium = size.width >= 220.dp && size.height >= 120.dp
+    val alert = snapshot.activeAlert(now)
 
     Column(modifier = GlanceModifier.fillMaxSize().padding(14.dp)) {
+        LocationRow(snapshot.localidad, alert)
+        Spacer(GlanceModifier.height(6.dp))
+        if (medium) {
+            // Block left, four-hour strip right (a fifth column crowds this width, as on iOS). The block sits
+            // at the top under the location row; the strip is centred vertically in the tile so it reads as
+            // its own band down the middle rather than clinging to the top edge.
+            Row(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
+                ConditionBlock(snapshot, now, medium = true)
+                Spacer(GlanceModifier.width(10.dp))
+                Box(
+                    modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(modifier = GlanceModifier.fillMaxWidth()) {
+                        snapshot.upcomingHours(now).take(4).forEach { slot ->
+                            HourColumn(slot, GlanceModifier.defaultWeight())
+                        }
+                    }
+                }
+            }
+        } else {
+            // Compact (narrow) tile. The block sits low like the iOS small widget; a four-hour strip is added
+            // beneath it only when the tile is tall enough to carry it at the same readable font the wide tile
+            // uses. A true 2x2 has that room, so it gets the strip; a short 2x1 doesn't, so it keeps just the
+            // block rather than a cramped, shrunken strip. When the strip shows, a second weighted spacer
+            // centres the block-and-strip group in the space below the location row.
+            val showStrip = size.height >= 180.dp
+            Spacer(GlanceModifier.defaultWeight())
+            ConditionBlock(snapshot, now, medium = false)
+            if (showStrip) {
+                Spacer(GlanceModifier.height(10.dp))
+                Row(modifier = GlanceModifier.fillMaxWidth()) {
+                    snapshot.upcomingHours(now).take(4).forEach { slot ->
+                        HourColumn(slot, GlanceModifier.defaultWeight())
+                    }
+                }
+                Spacer(GlanceModifier.defaultWeight())
+            }
+        }
+    }
+}
+
+/** The place name behind a location pin, with the aviso pill pushed to the trailing edge when a warning is
+ *  active — the iOS `HomeLocationRow`. The pin is the widget's own white vector (Glance can't reach the
+ *  app's Compose [androidx.compose.material.icons.Icons]). */
+@Composable
+private fun LocationRow(place: String, alert: WeatherAlert?) {
+    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_location),
+            contentDescription = null,
+            modifier = GlanceModifier.size(13.dp),
+        )
+        Spacer(GlanceModifier.width(4.dp))
         Text(
-            text = snapshot.localidad,
-            style = TextStyle(color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+            text = place,
+            style = TextStyle(color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold),
             maxLines = 1,
         )
-        Text(
-            text = temp,
-            style = TextStyle(color = White, fontSize = 38.sp, fontWeight = FontWeight.Medium),
-            maxLines = 1,
-        )
+        Spacer(GlanceModifier.defaultWeight())
+        if (alert != null) AvisoPill(alert.level)
+    }
+}
+
+/** The current condition glyph beside the hero temperature, the sky phrase, and today's high/low as up/down
+ *  arrows — the iOS `HomeConditionBlock`. [medium] shrinks the glyph and temperature a step and lets the sky
+ *  phrase wrap to two lines, keeping the left block narrow so the hour strip beside it has room. */
+@Composable
+private fun ConditionBlock(snapshot: WeatherSnapshot, now: Instant, medium: Boolean) {
+    val glyph = WeatherIcon.glyph(snapshot.currentSky, snapshot.isNight(now))
+    val temp = snapshot.heroTemp?.let { "$it°" } ?: "--°"
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // No colorFilter: the Meteocons drawables are full-colour (yellow sun, blue rain), so tinting
+            // would flatten them to a white silhouette. RemoteViews can't animate, so the widget shows the
+            // static Meteocons while the in-app strip plays the matching Lottie.
+            Image(
+                provider = ImageProvider(drawableFor(glyph)),
+                contentDescription = null,
+                modifier = GlanceModifier.size(if (medium) 28.dp else 30.dp),
+            )
+            Spacer(GlanceModifier.width(6.dp))
+            Text(
+                text = temp,
+                style = TextStyle(color = White, fontSize = if (medium) 34.sp else 38.sp, fontWeight = FontWeight.Medium),
+                maxLines = 1,
+            )
+        }
         snapshot.currentSkyText?.let {
             Text(
                 text = it,
                 style = TextStyle(color = WhiteDim, fontSize = 13.sp),
-                maxLines = 1,
+                maxLines = if (medium) 2 else 1,
             )
         }
-        if (hiLo.isNotEmpty()) {
-            Text(
-                text = hiLo,
-                style = TextStyle(color = WhiteFaint, fontSize = 12.sp),
-                maxLines = 1,
-            )
-        }
-
-        if (showHours) {
-            // Push the strip to the bottom of the tile so it fills the space instead of leaving a gap.
-            Spacer(GlanceModifier.defaultWeight())
-            Text(
-                text = "PRÓXIMAS HORAS",
-                style = TextStyle(color = WhiteFaint, fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                maxLines = 1,
-            )
-            Spacer(GlanceModifier.height(6.dp))
-            // Only carry a rain row at all when some hour is actually wet — a strip of "0%" is noise, and
-            // dropping it keeps the strip a row shorter so it fits without clipping on a dry day.
-            val anyRain = hours.any { (it.precipProb ?: 0) > 0 }
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                // defaultWeight() is a RowScope member, so the equal-share weight is applied here at the call
-                // site (inside the Row) and passed into each column, not from inside HourColumn.
-                hours.forEach { slot -> HourColumn(slot, use24h, anyRain, GlanceModifier.defaultWeight()) }
-            }
-        } else {
-            // Compact tile: no room for the strip, so keep the current hour's rain on its own line.
-            snapshot.upcomingHours().firstOrNull()?.precipProb?.let {
-                Text(
-                    text = "Lluvia $it%",
-                    style = TextStyle(color = WhiteFaint, fontSize = 12.sp),
-                    maxLines = 1,
-                )
-            }
-        }
+        Spacer(GlanceModifier.height(2.dp))
+        HighLow(snapshot)
     }
 }
 
-/** One column of the hourly strip: the hour, the condition icon (the app's own drawable), the temperature,
- *  and the rain probability when there is one. Each takes an equal share of the row via [defaultWeight]. */
+/** Today's high and low as "↑ 33°  ↓ 23°", matching the iOS block's arrow.up / arrow.down labels (the arrows
+ *  are Unicode glyphs, so no drawable is needed). Hidden entirely when neither value is known. */
 @Composable
-private fun HourColumn(slot: HourSlot, use24h: Boolean, showRain: Boolean, modifier: GlanceModifier) {
-    val glyph = WeatherIcon.glyph(slot.sky)
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun HighLow(snapshot: WeatherSnapshot) {
+    val hi = snapshot.tempMax?.let { "↑ $it°" }
+    val lo = snapshot.tempMin?.let { "↓ $it°" }
+    if (hi == null && lo == null) return
+    val style = TextStyle(color = WhiteFaint, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        hi?.let { Text(text = it, style = style, maxLines = 1) }
+        if (hi != null && lo != null) Spacer(GlanceModifier.width(10.dp))
+        lo?.let { Text(text = it, style = style, maxLines = 1) }
+    }
+}
+
+/** A small level-tinted "Aviso" pill for an active AEMET warning, the iOS `AvisoPill`. The warning triangle
+ *  and colour follow the app's own alert palette ([Palette.alert]). */
+@Composable
+private fun AvisoPill(level: WeatherAlert.Level) {
+    Row(
+        modifier = GlanceModifier
+            .background(ColorProvider(Palette.alert(level)))
+            .cornerRadius(10.dp)
+            .padding(horizontal = 7.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_warning),
+            contentDescription = null,
+            modifier = GlanceModifier.size(11.dp),
+        )
+        Spacer(GlanceModifier.width(3.dp))
         Text(
-            text = AuraTime.hourLabel(slot.hour, use24h),
+            text = "Aviso",
+            style = TextStyle(color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+            maxLines = 1,
+        )
+    }
+}
+
+/** One column of the hourly strip: the bare hour number, the condition glyph, the temperature — the iOS
+ *  `HomeHourColumn`. iOS shows the raw 24h hour here regardless of the app's clock setting, and carries no
+ *  rain row on the medium strip, so this matches both. Each column takes an equal share via [defaultWeight]. */
+@Composable
+private fun HourColumn(slot: HourSlot, modifier: GlanceModifier) {
+    val glyph = WeatherIcon.glyph(slot.sky)
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "${slot.hour}",
             style = TextStyle(color = WhiteFaint, fontSize = 12.sp),
             maxLines = 1,
         )
         Spacer(GlanceModifier.height(3.dp))
-        // No colorFilter: the Meteocons drawables are full-colour (yellow sun, blue rain), so tinting them
-        // would flatten the art to a white silhouette. The widget can't animate (RemoteViews), so it shows
-        // the static Meteocons here while the in-app strip plays the matching Lottie.
         Image(
             provider = ImageProvider(drawableFor(glyph)),
             contentDescription = null,
-            modifier = GlanceModifier.size(20.dp),
+            modifier = GlanceModifier.size(22.dp),
         )
         Spacer(GlanceModifier.height(3.dp))
         Text(
@@ -242,15 +327,6 @@ private fun HourColumn(slot: HourSlot, use24h: Boolean, showRain: Boolean, modif
             style = TextStyle(color = White, fontSize = 13.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
         )
-        // Rendered across all columns or none (see anyRain), so the columns stay aligned; a dry hour in a
-        // wet strip shows a blank placeholder rather than collapsing its column shorter than the others.
-        if (showRain) {
-            Text(
-                text = slot.precipProb?.takeIf { it > 0 }?.let { "$it%" } ?: " ",
-                style = TextStyle(color = WhiteFaint, fontSize = 11.sp),
-                maxLines = 1,
-            )
-        }
     }
 }
 

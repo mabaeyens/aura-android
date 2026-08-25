@@ -1,5 +1,12 @@
 package com.mab.aura.ui.hoy
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -7,9 +14,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -33,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -170,18 +181,19 @@ private fun locationFallbackText(fallback: LocationFallback?, permissionAsked: B
 @Composable
 private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant) {
     // [BoxWithConstraints] hands us the viewport height (maxHeight) before the scroll, so we can stretch the
-    // hero to fill one screenful and push every forecast card below the fold, matching iOS: the opening screen
-    // is just the sky and the editorial summary, the cards revealed on scroll. The fill height is the viewport
-    // minus the system-bar insets and the Column's own 12+12 vertical padding, so the first card sits right at
-    // the fold edge rather than an inset's-worth of extra scroll away.
+    // hero to fill one screenful and push every forecast card *fully* below the fold, matching iOS: the opening
+    // screen is just the sky and the editorial summary, nothing of the next card showing. The fill height is
+    // the viewport minus the top inset and the Column's top padding, so the hero reaches the bottom edge and
+    // the first card (plus the stack's gap) lands just off-screen. A scroll cue takes the place of the peeking
+    // title (see [ScrollHint]).
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val insets = WindowInsets.safeDrawing.asPaddingValues()
-        val heroFill = (maxHeight - insets.calculateTopPadding() - insets.calculateBottomPadding() - 24.dp)
-            .coerceAtLeast(0.dp)
+        val heroFill = (maxHeight - insets.calculateTopPadding() - 12.dp).coerceAtLeast(0.dp)
+        val scroll = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .safeDrawingPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
@@ -196,6 +208,50 @@ private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant)
             }
             AuraForecastStack(snapshot = snapshot, size = AuraSize.Phone, now = now, heroFillHeight = heroFill)
         }
+
+        // The scroll cue: a gentle chevron pinned above the nav bar, shown only at the top of the scroll and
+        // fading away the moment the user starts scrolling (like iOS's hero chevron).
+        ScrollHint(
+            visible = scroll.value == 0,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = insets.calculateBottomPadding() + 8.dp),
+        )
+    }
+}
+
+/**
+ * A downward chevron hinting that the forecast cards are below the fold. It bobs slowly to catch the eye and
+ * fades out as soon as the scroll leaves the top, so it never sits over the cards. A faint dark twin behind
+ * the white glyph gives it the same halo the hero text uses, so it reads over a pale sky too.
+ */
+@Composable
+private fun ScrollHint(visible: Boolean, modifier: Modifier = Modifier) {
+    val alpha by animateFloatAsState(targetValue = if (visible) 0.9f else 0f, label = "scrollHintAlpha")
+    val bob by rememberInfiniteTransition(label = "scrollHintBob").animateFloat(
+        initialValue = 0f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "scrollHintOffset",
+    )
+    Box(
+        modifier = modifier
+            .offset(y = bob.dp)
+            .graphicsLayer { this.alpha = alpha },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.35f),
+            modifier = Modifier.size(34.dp).offset(y = 1.dp),
+        )
+        Icon(
+            imageVector = Icons.Filled.KeyboardArrowDown,
+            contentDescription = "Desliza para ver la previsión",
+            tint = Color.White,
+            modifier = Modifier.size(34.dp),
+        )
     }
 }
 

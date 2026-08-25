@@ -100,11 +100,13 @@ fun AuraHeroCard(
         )
 
         Text(
-            // Máx/Mín · viento · humedad · lluvia, folded into a sentence by ForecastPhrase.
+            // Máx/Mín · viento · humedad · lluvia, folded into a sentence by ForecastPhrase. This is the
+            // smallest hero line, so it gets solid white and a touch more weight to hold contrast over a
+            // bright, washed-out sky (the soft-alpha grey it used before disappeared into a pale noon).
             text = ForecastPhrase.dataline(snapshot, now),
             fontSize = size.bodySize - 4,
-            fontWeight = FontWeight.Normal,
-            color = Color.White.copy(alpha = 0.9f),
+            fontWeight = FontWeight.Medium,
+            color = Color.White,
             style = heroShadow,
         )
 
@@ -136,9 +138,11 @@ fun AuraHeroCard(
 }
 
 /**
- * A soft dark halo behind the hero text, matching the Swift card's `.shadow`. It keeps white text legible
- * over a bright noon sky without reintroducing a panel; the sky's own scrim does the rest.
+ * A dark halo behind the hero text, matching the Swift card's `.shadow`. It keeps white text legible over a
+ * bright noon sky without reintroducing a panel; the sky's own scrim does the rest. Deepened from the first
+ * port (0.35 alpha / 9 blur was too faint under a pale sky): a wider, darker blur reads as a soft glow the
+ * text always sits on, whatever the art behind it.
  */
 private val heroShadow = TextStyle(
-    shadow = Shadow(color = Color.Black.copy(alpha = 0.35f), offset = Offset(0f, 1f), blurRadius = 9f),
+    shadow = Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(0f, 1f), blurRadius = 16f),
 )

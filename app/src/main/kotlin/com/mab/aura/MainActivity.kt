@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.mab.aura.ui.about.AcercaScreen
+import com.mab.aura.ui.help.AyudaScreen
 import com.mab.aura.ui.hoy.HoyScreen
 import com.mab.aura.ui.locations.AddLocationScreen
 import com.mab.aura.ui.locations.LocationsScreen
@@ -19,7 +21,7 @@ import com.mab.aura.ui.theme.AuraTheme
 import com.mab.aura.work.WeatherRefreshScheduler
 
 /** The app's destinations. Hoy is the root; every other screen returns to a statically-known parent (see below). */
-private enum class Screen { Hoy, Settings, Locations, AddLocation }
+private enum class Screen { Hoy, Settings, Locations, AddLocation, Help, About }
 
 /**
  * The app's single activity. It hosts the live "Hoy" screen (a full-bleed sky, its own surface), "Ajustes",
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         onOpenSettings = { screen = Screen.Settings },
                         onOpenLocations = { screen = Screen.Locations },
+                        onOpenHelp = { screen = Screen.Help },
+                        onOpenAbout = { screen = Screen.About },
                     )
 
                     Screen.Settings -> {
@@ -72,6 +76,22 @@ class MainActivity : ComponentActivity() {
                         AddLocationScreen(
                             modifier = Modifier.fillMaxSize(),
                             onBack = { screen = Screen.Locations },
+                        )
+                    }
+
+                    Screen.Help -> {
+                        BackHandler { screen = Screen.Hoy }
+                        AyudaScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Hoy },
+                        )
+                    }
+
+                    Screen.About -> {
+                        BackHandler { screen = Screen.Hoy }
+                        AcercaScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Hoy },
                         )
                     }
                 }

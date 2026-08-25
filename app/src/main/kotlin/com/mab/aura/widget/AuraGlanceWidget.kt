@@ -42,6 +42,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.mab.aura.MainActivity
+import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.icon.WeatherIcon
 import com.mab.aura.core.model.HourSlot
 import com.mab.aura.core.model.WeatherSnapshot
@@ -49,6 +50,7 @@ import com.mab.aura.core.time.AuraTime
 import com.mab.aura.store.Settings
 import com.mab.aura.ui.drawableFor
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 
 /**
  * Aura's Home Screen widget. Android port of the iOS `AuraHomeWidget`, moved from the Lock Screen (which
@@ -72,14 +74,18 @@ class AuraGlanceWidget : GlanceAppWidget() {
         // "use the app's active location, then the first cache entry".
         val pinnedINE = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)[PINNED_INE_KEY]
 
-        // The cache read (file + DataStore) is suspending, so it happens here, outside the composition; the
-        // gradient bitmap is likewise built once per update, not per recomposition.
+        // The cache read (file + DataStore) and asset decode are suspending/blocking, so they happen here,
+        // outside the composition, once per update rather than per recomposition. The background is the real
+        // wide hero scene for this sky + time of day, falling back to the procedural sky gradient.
+        val settings = Settings(context)
         val snapshot = SharedSnapshot.resolve(context, pinnedINE)
-        val use24h = Settings(context).use24h.first()
-        val background = snapshot?.let { skyGradientBitmap(it.currentSky) }
+        val use24h = settings.use24h.first()
+        val family = HeroBackground.Family.from(settings.heroFamily.first())
+        val hero = snapshot?.let { wideHeroBitmap(context, it, Instant.now(), family) }
+        val background = hero ?: snapshot?.let { skyGradientBitmap(it.currentSky) }
 
         provideContent {
-            WidgetContent(snapshot, background, use24h)
+            WidgetContent(snapshot, background, backgroundIsHero = hero != null, use24h = use24h)
         }
     }
 }
@@ -101,7 +107,12 @@ private val WhiteFaint = ColorProvider(Color(0xCCFFFFFF))
 private val HOURS_MIN_HEIGHT = 190.dp
 
 @Composable
-private fun WidgetContent(snapshot: WeatherSnapshot?, background: Bitmap?, use24h: Boolean) {
+private fun WidgetContent(
+    snapshot: WeatherSnapshot?,
+    background: Bitmap?,
+    backgroundIsHero: Boolean,
+    use24h: Boolean,
+) {
     // The whole widget opens the app, matching the iOS tap target. actionStartActivity's Intent overload is
     // unambiguous (the reified generic collides with it here), so build the launch Intent explicitly.
     val openApp = actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))
@@ -113,20 +124,24 @@ private fun WidgetContent(snapshot: WeatherSnapshot?, background: Bitmap?, use24
             .clickable(openApp),
         contentAlignment = Alignment.Center,
     ) {
-        // 1 — the sky gradient, stretched to fill (a fallback flat night colour before the first cache write).
+        // 1 — the background: the wide hero scene, centre-cropped to the tile so it keeps its aspect (the art
+        // is 4:3), or the thin procedural gradient stretched to fill. A flat night colour shows before the
+        // first cache write.
         if (background != null) {
             Image(
                 provider = ImageProvider(background),
                 contentDescription = null,
-                contentScale = ContentScale.FillBounds,
+                contentScale = if (backgroundIsHero) ContentScale.Crop else ContentScale.FillBounds,
                 modifier = GlanceModifier.fillMaxSize(),
             )
         } else {
             Box(GlanceModifier.fillMaxSize().background(ColorProvider(Color(0xFF12203A)))) {}
         }
 
-        // 2 — a soft dark scrim so white text stays legible over the brightest (clear, day) skies too.
-        Box(GlanceModifier.fillMaxSize().background(ColorProvider(Color(0x40000000)))) {}
+        // 2 — a soft dark scrim so white text stays legible over the brightest (clear, day) skies too. A hero
+        // scene's bright noon sky needs a touch more than the flat gradient did.
+        val scrim = if (backgroundIsHero) 0x59000000 else 0x40000000
+        Box(GlanceModifier.fillMaxSize().background(ColorProvider(Color(scrim)))) {}
 
         // 3 — the content, or the empty invitation before anything is cached.
         if (snapshot == null) EmptyContent() else FilledContent(snapshot, use24h)

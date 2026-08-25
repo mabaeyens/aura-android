@@ -72,12 +72,17 @@ fun AuraDailyCard(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(1.dp),
-                            modifier = Modifier.width(40.dp),
+                            modifier = Modifier.width(54.dp),
                         ) {
+                            // A touch larger than the hourly strip's glyph: the daily rows are taller and more
+                            // widely spaced, so a bigger icon reads as the row's anchor instead of a small mark.
+                            // The animated Meteocons carry internal transparent padding, so the visible art needs
+                            // this headroom to match the weight of the temperature text beside it. The column is
+                            // widened to hold the glyph's `slot * 1.5` footprint without clipping.
                             AnimatedConditionGlyph(
                                 sky = d.sky,
                                 isNight = d.sky?.endsWith("n") == true,
-                                slot = size.iconSize,
+                                slot = size.iconSize + 8.dp,
                             )
                             // Always render the precip line (a blank when there's no meaningful chance) so
                             // every row is exactly the same height, rain or not.

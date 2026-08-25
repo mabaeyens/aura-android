@@ -88,7 +88,10 @@ private fun HourColumn(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        // Tighter than the original 12dp. The strip scrolls horizontally, so the whole Row is as tall as its
+        // tallest column — a rainy hour that carries a precip line. Dry hours are top-anchored, so any slack
+        // here shows as an empty band below their temperature; a smaller gap keeps that band to a minimum.
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = hourLabel(h.hour),
@@ -104,21 +107,31 @@ private fun HourColumn(
             isNight = h.sky?.endsWith("n") == true,
             slot = size.iconSize + 6.dp,
         )
-        Text(
-            text = h.temp?.let { "$it°" } ?: "—",
-            fontSize = size.bodySize - 2,
-            fontWeight = FontWeight.Bold,
-            color = Palette.temperature(h.temp),
-            textAlign = TextAlign.Center,
-        )
-        if (showPrecip) {
+        // Temperature and its rain chance sit together as one tight unit. The strip scrolls in a single
+        // Row, so the Row's height is set by the tallest column — a rainy hour that carries a precip line.
+        // A dry hour is top-anchored, so it would otherwise show that whole reserved line as empty space
+        // under its temperature. Pairing them here, with only a hair of spacing and a small precip font,
+        // keeps that reserved band down to the height of the little percentage text instead of a full line.
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             Text(
-                text = h.precipProb?.let { if (it > 0) "$it%" else "" } ?: "",
-                fontSize = size.smallSize - 1,
-                fontWeight = FontWeight.SemiBold,
-                color = auraPrecipColor,
+                text = h.temp?.let { "$it°" } ?: "—",
+                fontSize = size.bodySize - 2,
+                fontWeight = FontWeight.Bold,
+                color = Palette.temperature(h.temp),
                 textAlign = TextAlign.Center,
             )
+            if (showPrecip) {
+                Text(
+                    text = h.precipProb?.let { if (it > 0) "$it%" else "" } ?: "",
+                    fontSize = size.smallSize - 3,
+                    fontWeight = FontWeight.SemiBold,
+                    color = auraPrecipColor,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

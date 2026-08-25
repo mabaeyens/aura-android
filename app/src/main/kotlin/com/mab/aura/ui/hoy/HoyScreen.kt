@@ -2,9 +2,13 @@ package com.mab.aura.ui.hoy
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import android.Manifest
 import android.content.pm.PackageManager
@@ -165,23 +169,33 @@ private fun locationFallbackText(fallback: LocationFallback?, permissionAsked: B
 /** The weather itself: the card stack in a vertical scroll over the sky, as the app lays it out. */
 @Composable
 private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .safeDrawingPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        // A non-blocking notice (e.g. "offline, showing last data") above the still-useful cached cards.
-        if (notice != null) {
-            Text(
-                text = notice,
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.82f),
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
+    // [BoxWithConstraints] hands us the viewport height (maxHeight) before the scroll, so we can stretch the
+    // hero to fill one screenful and push every forecast card below the fold, matching iOS: the opening screen
+    // is just the sky and the editorial summary, the cards revealed on scroll. The fill height is the viewport
+    // minus the system-bar insets and the Column's own 12+12 vertical padding, so the first card sits right at
+    // the fold edge rather than an inset's-worth of extra scroll away.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val insets = WindowInsets.safeDrawing.asPaddingValues()
+        val heroFill = (maxHeight - insets.calculateTopPadding() - insets.calculateBottomPadding() - 24.dp)
+            .coerceAtLeast(0.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .safeDrawingPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            // A non-blocking notice (e.g. "offline, showing last data") above the still-useful cached cards.
+            if (notice != null) {
+                Text(
+                    text = notice,
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.82f),
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
+            AuraForecastStack(snapshot = snapshot, size = AuraSize.Phone, now = now, heroFillHeight = heroFill)
         }
-        AuraForecastStack(snapshot = snapshot, size = AuraSize.Phone, now = now)
     }
 }
 

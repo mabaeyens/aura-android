@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -26,11 +29,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -38,10 +45,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -72,6 +81,8 @@ fun HoyScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
     onOpenLocations: () -> Unit = {},
+    onOpenHelp: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     now: Instant = Instant.now(),
 ) {
     val viewModel: HoyViewModel = viewModel()
@@ -140,25 +151,56 @@ fun HoyScreen(
             }
         }
 
-        // The chrome over the sky, clear of the status bar and white to read against it: a place pin top-left
-        // to manage saved locations, a settings gear top-right.
-        IconButton(
-            onClick = onOpenLocations,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .safeDrawingPadding()
-                .padding(4.dp),
-        ) {
-            Icon(Icons.Filled.Place, contentDescription = "Ubicaciones", tint = Color.White)
-        }
-        IconButton(
-            onClick = onOpenSettings,
+        // The only chrome over the sky is the gear top-right, clear of the status bar and white to read
+        // against it. Tapping it opens a small menu rather than jumping straight to Ajustes: the saved-locations
+        // pin used to live top-left but collided with the city name, so its entry point moved in here.
+        Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .safeDrawingPadding()
                 .padding(4.dp),
         ) {
-            Icon(Icons.Filled.Settings, contentDescription = "Ajustes", tint = Color.White)
+            var menuOpen by remember { mutableStateOf(false) }
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(Icons.Filled.Settings, contentDescription = "Menú", tint = Color.White)
+            }
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Ubicaciones") },
+                    leadingIcon = { Icon(Icons.Filled.Place, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenLocations()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Ajustes") },
+                    leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenSettings()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Ayuda") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenHelp()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Acerca de") },
+                    leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenAbout()
+                    },
+                )
+            }
         }
     }
 }
@@ -190,6 +232,22 @@ private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant)
         val insets = WindowInsets.safeDrawing.asPaddingValues()
         val heroFill = (maxHeight - insets.calculateTopPadding() - 12.dp).coerceAtLeast(0.dp)
         val scroll = rememberScrollState()
+
+        // Option B — a fixed top scrim: a soft dark-to-transparent gradient over the sky, darkest at the very
+        // top and gone by ~45% down, so the hero text sits on real contrast whatever the art behind it. Fixed
+        // (not in the scroll), so it only ever darkens the top band; the cards scroll up clear of it.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(maxHeight * 0.45f)
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = 0.30f),
+                        1f to Color.Transparent,
+                    ),
+                ),
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

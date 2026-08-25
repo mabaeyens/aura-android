@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The AppWidgetProviderInfo for Aura's Home Screen widget. Glance owns the actual rendering (see
+  AuraWidgetReceiver / AuraGlanceWidget); this only describes the widget to the launcher's picker.
+
+  initialLayout points at Glance's bundled loading layout, shown for the instant before the first
+  provideGlance runs. updatePeriodMillis is the system's own re-render nudge (clamped to 30 min minimum) —
+  it re-reads the cache and refreshes the time-of-day sky, but never fetches; a real background data refresh
+  is WorkManager's job in a later increment. Sizes target a 2x2 cell, resizable in both directions.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewImage="@drawable/aura_widget_preview"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description" />

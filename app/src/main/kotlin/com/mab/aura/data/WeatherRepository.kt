@@ -15,6 +15,8 @@ import com.mab.aura.core.net.OpenMeteoUV
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.store.SecretStore
 import com.mab.aura.store.SnapshotCache
+import androidx.glance.appwidget.updateAll
+import com.mab.aura.widget.AuraGlanceWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -166,6 +168,12 @@ class WeatherRepository(context: Context) {
             )
             snapshotCache.upsert(snapshot)
         }
+
+        // Fresh data is in the cache — re-render every Home Screen widget so it doesn't wait for its own slow
+        // system refresh. The widget reads the cache itself; this just tells it to. Matches iOS reloading the
+        // widget timelines after a fetch. Never let a widget hiccup fail the refresh.
+        runCatching { AuraGlanceWidget().updateAll(appContext) }
+
         return firstError
     }
 

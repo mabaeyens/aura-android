@@ -74,6 +74,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
+    // Jetpack Glance: the Home Screen app widget (widget/*). Its @Composable content is compiled by the
+    // Compose plugin already applied above, but renders to RemoteViews rather than Compose, so it reads the
+    // shared cache and draws a restricted layout instead of reusing the AuraSky/card Composables.
+    implementation(libs.androidx.glance.appwidget)
+
     // JVM unit tests for the app-side pure logic (e.g. AuraSunPath position maths). These run on the
     // local JVM with `./gradlew :app:testDebugUnitTest`; no device or Robolectric needed, since the code
     // under test only touches Compose value classes (Offset) and java.time, not the Android framework.

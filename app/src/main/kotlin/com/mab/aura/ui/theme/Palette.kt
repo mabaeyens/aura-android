@@ -263,6 +263,16 @@ object Palette {
         return Brush.verticalGradient(skyColors(category, isNight))
     }
 
+    /**
+     * The raw top-to-bottom gradient stops for a sky code, as plain [Color]s. Same ramp [skyGradient] paints,
+     * exposed so the Glance widget can bake the gradient into a bitmap (Glance renders to RemoteViews and has
+     * no Brush). The single source of truth for the sky ramp stays [skyColors].
+     */
+    fun skyGradientColors(code: String?): List<Color> {
+        val (category, isNight) = SkyCode.classify(code)
+        return skyColors(category, isNight)
+    }
+
     private fun skyColors(category: SkyCategory, isNight: Boolean): List<Color> {
         if (isNight) {
             return when (category) {

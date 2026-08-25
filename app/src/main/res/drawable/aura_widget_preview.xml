@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launcher picker's preview thumbnail: a clear-day sky gradient with rounded corners, standing in for a
+  live render. A static vector (no cache to read at pick time) roughly matching AuraSky's clear-day ramp.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="#FF3385EB"
+        android:endColor="#FF73B8FA" />
+</shape>

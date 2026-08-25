@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Aura</string>
+    <string name="widget_label">Aura</string>
+    <string name="widget_description">El tiempo de tu ubicación en la pantalla de inicio.</string>
 </resources>

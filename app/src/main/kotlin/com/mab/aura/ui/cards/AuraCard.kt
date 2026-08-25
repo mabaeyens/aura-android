@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -45,6 +47,21 @@ import androidx.compose.ui.unit.sp
 /** A brighter blue than [com.mab.aura.ui.theme.Palette.tempBlue] for precipitation labels, so the rain
  *  chance stays legible on the dark frosted cards even over a cloudy, greyed-down sky. */
 internal val auraPrecipColor = Color(red = 0.52f, green = 0.80f, blue = 1.0f)
+
+/**
+ * How dark a frosted card's inner scrim rides, keyed to the sky behind it: the black opacity at the card's
+ * top and (heavier) bottom. Set once by [AuraForecastStack] from the snapshot and read by every [AuraCard],
+ * so the whole stack agrees. Ported from the Swift `AuraCardScrim` environment value.
+ *
+ * The default matches the previous fixed gradient (0.06 -> 0.24), so a card rendered on its own — a single
+ * `@Preview`, say — looks exactly as it did before the stack existed.
+ */
+internal data class AuraCardScrim(val top: Float = 0.06f, val bottom: Float = 0.24f)
+
+/** The scrim in scope for the cards, Compose's equivalent of Swift's `@Environment(\.auraCardScrim)`.
+ *  [AuraForecastStack] overrides it per sky; outside the stack it stays the fixed default. */
+internal val LocalAuraCardScrim: ProvidableCompositionLocal<AuraCardScrim> =
+    compositionLocalOf { AuraCardScrim() }
 
 /** Phone metrics. The Swift enum resized these for the Watch; here there is only the phone. */
 enum class AuraSize {
@@ -88,17 +105,20 @@ internal fun AuraCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(size.cardCorner)
+    // The sky-tuned scrim from the stack (or the fixed default outside it): brighter skies get more
+    // darkening so the temperature colours read, skies already dark get next to none.
+    val scrim = LocalAuraCardScrim.current
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            // The translucent pane the sky reads through, then the same black 0.06 -> 0.24 vertical
-            // scrim the Swift card rides inside: it lifts contrast where the hero sky is brightest
-            // (the bottom) while barely touching the top, so the corners stay clean.
+            // The translucent pane the sky reads through, then a bottom-weighted black scrim the Swift
+            // card rides inside: it lifts contrast where the hero sky is brightest (the bottom) while
+            // barely touching the top, so the corners stay clean.
             .background(Color(red = 0.08f, green = 0.10f, blue = 0.14f, alpha = 0.55f))
             .background(
                 Brush.verticalGradient(
-                    listOf(Color.Black.copy(alpha = 0.06f), Color.Black.copy(alpha = 0.24f)),
+                    listOf(Color.Black.copy(alpha = scrim.top), Color.Black.copy(alpha = scrim.bottom)),
                 ),
             )
             .border(0.5.dp, Color.White.copy(alpha = 0.16f), shape)

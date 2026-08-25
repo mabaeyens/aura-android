@@ -2,9 +2,13 @@ package com.mab.aura.ui.cards
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -25,6 +29,7 @@ import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.core.wind.WindDirection
+import com.mab.aura.ui.sky.AuraSky
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
@@ -189,6 +194,67 @@ private fun SunArcCardPreview() {
 private fun MoonArcCardPreview() {
     SkyPanel {
         AuraMoonArcCard(snapshot = sampleSnapshot, size = AuraSize.Phone, now = previewNow)
+    }
+}
+
+// The whole "Hoy" screen: the full card stack over the sky, in the app's scroll host. Two variants exercise
+// the Sol/Luna slot and the sky-tuned scrim — a clear afternoon (Sol, full scrim) and after dark (Luna, near
+// none). hoursScroll = false so the hourly strip lays out for the still. The snapshot is enriched per preview
+// with an active aviso and a bulletin so the alert/hero-glance and bulletin cards appear.
+@Preview(name = "Forecast stack (day)", widthDp = 400, heightDp = 1600)
+@Composable
+private fun ForecastStackDayPreview() {
+    ForecastStackScreen(now = previewNow)
+}
+
+@Preview(name = "Forecast stack (night)", widthDp = 400, heightDp = 1600)
+@Composable
+private fun ForecastStackNightPreview() {
+    // 21:30 UTC is after the sample's ~19:15 sunset, so isNight() is true: the Luna arc shows and the scrim
+    // drops to near nothing.
+    ForecastStackScreen(now = Instant.parse("2026-08-25T21:30:00Z"))
+}
+
+/** Shared host for the two stack previews: the stack in a vertical scroll over `AuraSky`, as the app lays it out. */
+@Composable
+private fun ForecastStackScreen(now: Instant) {
+    val snapshot = sampleSnapshot.copy(
+        alert = WeatherAlert(
+            level = WeatherAlert.Level.NARANJA,
+            event = "Aviso de tormentas de nivel naranja",
+            phenomenon = "Tormentas",
+            zona = "280001",
+            areaDesc = "Madrid capital",
+            onset = previewNow.minus(Duration.ofHours(1)),
+            expires = previewNow.plus(Duration.ofHours(12)),
+        ),
+        bulletin = "Cielo nuboso con probables chubascos y tormentas por la tarde. Temperaturas máximas en " +
+            "descenso. Viento del suroeste flojo a moderado.",
+        bulletinPhenomenon = "Tormentas",
+    )
+    val radar = remember { previewRadarBitmap() }
+    Box(modifier = Modifier.fillMaxSize()) {
+        AuraSky(snapshot = snapshot, modifier = Modifier.fillMaxSize(), now = now)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+        ) {
+            AuraForecastStack(
+                snapshot = snapshot,
+                size = AuraSize.Phone,
+                now = now,
+                hoursScroll = false,
+                radar = AuraRadarInfo(image = radar, siteName = "Madrid", time = now.minus(Duration.ofMinutes(6))),
+                news = listOf(
+                    sampleNews("El tiempo se complica: lluvias intensas este fin de semana en el norte",
+                        NewsSource.RTVE, Duration.ofMinutes(2)),
+                    sampleNews("Aviso naranja por tormentas en el interior peninsular",
+                        NewsSource.AEMET, Duration.ofHours(3)),
+                ),
+            )
+        }
     }
 }
 

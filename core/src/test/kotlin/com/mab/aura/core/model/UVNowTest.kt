@@ -72,4 +72,25 @@ class UVNowTest {
         assertNull(uv.peakHour)
         assertNull(uv.protection)
     }
+
+    // --- cloudy: is the current sky holding the UV below its clear-sky value? ---
+
+    private fun snapshot(sky: String?) = WeatherSnapshot(
+        ine = "28079", localidad = "Madrid", provincia = "Madrid", currentSky = sky, updated = midnight,
+    )
+
+    @Test
+    fun cloudy_isTrueForOvercastRainStormSnowFog() {
+        // 16 = overcast, 25 = rain, 52 = storm, 71 = snow, 81 = fog (representative AEMET codes).
+        for (code in listOf("16", "25", "52", "71", "81")) {
+            assertEquals("code $code should read cloudy", true, UVNow.cloudy(snapshot(code)))
+        }
+    }
+
+    @Test
+    fun cloudy_isFalseForClearAndFewClouds() {
+        for (code in listOf("11", "12", "13", null)) {
+            assertEquals("code $code should not read cloudy", false, UVNow.cloudy(snapshot(code)))
+        }
+    }
 }

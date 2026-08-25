@@ -1,5 +1,7 @@
 package com.mab.aura.core.model
 
+import com.mab.aura.core.sky.SkyCategory
+import com.mab.aura.core.sky.SkyCode
 import java.time.Instant
 import java.time.ZoneId
 
@@ -58,5 +60,17 @@ data class UVNow(
             }
             return UVNow(nowIndex, peak?.index, peak?.let { hour(it.date) }, protection)
         }
+
+        /**
+         * True when the current sky is overcast or wet enough that cloud is materially holding the UV index
+         * below its clear-sky value. Drives the UV card's cloud cue: it tells the reader the number is the
+         * cloudy reading, not the clear-sky potential. Ported from Swift `UVNow.cloudy`.
+         */
+        fun cloudy(snapshot: WeatherSnapshot): Boolean =
+            when (SkyCode.classify(snapshot.currentSky).category) {
+                SkyCategory.OVERCAST, SkyCategory.RAIN, SkyCategory.STORM,
+                SkyCategory.SNOW, SkyCategory.FOG -> true
+                else -> false
+            }
     }
 }

@@ -302,6 +302,25 @@ object Palette {
         }
     }
 
+    /**
+     * How dark the frosted cards should ride for a sky, as the black opacity at the card's top and (heavier)
+     * bottom. The hero glow is brightest at the horizon, under the lowest cards, so bright skies (clear, few
+     * clouds) get the full gradient, mid skies (clouds, fog, snow) a moderate one, and skies already grey or
+     * dark (overcast, rain, storm, any night) barely any. Ported from Swift `Palette.cardScrim(forCode:)`;
+     * [AuraForecastStack][com.mab.aura.ui.cards.AuraForecastStack] wraps this in an `AuraCardScrim`.
+     */
+    fun cardScrim(code: String?): Pair<Float, Float> {
+        val (category, isNight) = SkyCode.classify(code)
+        if (isNight) return 0.0f to 0.08f            // sky already dark — leave it be
+        return when (category) {
+            SkyCategory.CLEAR, SkyCategory.FEW_CLOUDS -> 0.10f to 0.34f   // bright — the colours need the lift
+            SkyCategory.CLOUDS, SkyCategory.FOG, SkyCategory.SNOW -> 0.05f to 0.22f  // mid — a moderate scrim
+            SkyCategory.OVERCAST, SkyCategory.RAIN -> 0.0f to 0.12f       // already grey — a whisper
+            SkyCategory.STORM -> 0.0f to 0.10f
+            SkyCategory.UNKNOWN -> 0.06f to 0.24f    // the previous fixed default
+        }
+    }
+
     /** An accent tint for a sky condition — the icon/foreground colour that reads on a neutral card. */
     fun skyAccent(code: String?): Color {
         val (category, isNight) = SkyCode.classify(code)

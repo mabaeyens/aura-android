@@ -4,6 +4,8 @@ What is next on aura-android, roughly in order. This tracks the phased roadmap i
 
 ## Done
 
+- 2026-08-25: Started Layer E (Compose UI), porting the sky primitives. `Palette.kt` (`:app`) holds the colour half of `Palette.swift` (temperature/wind/AQI/UV/precip ramps, time-of-day and per-condition sky gradients, accents, alert colours), delegating the pure `sky(forCode:)` split to `:core`'s `SkyCode.classify`; SwiftUI `Color`→Compose `Color`, `LinearGradient`→`Brush.verticalGradient`; the two watch-complication-only precip helpers dropped. `PhasedMoonDisc.kt` is the lit-limb moon as a standalone composable plus a shared `DrawScope.drawPhasedMoon()`. `AuraSky.kt` is the procedural sky, the SwiftUI `ZStack` collapsed into one `Canvas` (gradient, veil, night dim, glow, corona, sun disc / phased moon, stars, vector scenery, precip); the deferred `AuraSunPath` position/altitude arc lands here reusing `:core`'s `onSameDay`, and `.blur().opacity()` becomes a `GraphicsLayer` + `BlurEffect`. `@Preview`s for six sky states + moon phases. The hero-image overlay is deferred (the 8×6 art is the Appendix A problem, not in the repo).
+- 2026-08-25: Finished the `:core` port. Completed the fetch side and `WeatherSnapshot.make()`: `Location`, `StationObservation` (+ nearest-station haversine), `OpenMeteoUV`, `MitecoAirQuality`, `CAPParser` + a tar reader, and `WeatherSnapshotFactory.make()` itself. Then the remaining pure logic: `MoonPhaseMath` and `LunarTimes` (true lunar position, moonrise/moonset), `ForecastPhrase` (on-device Spanish hero prose), `WeatherIcon` (sky-code→glyph), `Comunidad` (province→community), `News` + the RSS parser, and `HeroBackground` name resolution. `:core` is now behaviourally complete.
 - 2026-08-24: Installed the Android toolchain (keg-only JDK 21, Android Studio, SDK for API 36) and expanded the porting plan with a disk-footprint section and a file-by-file Swift-to-Kotlin map.
 - 2026-08-24: Scaffolded the project: two Gradle modules (`:app` Compose Material 3, `:core`), building an 11 MB debug APK with passing unit tests. First logic port landed, `SolarTimes` from AuraKit, and `MainActivity` shows Madrid sun times as an end-to-end check.
 - 2026-08-24: Set up the repo (README, license, orientation and release docs, changelog, privacy, gitignored `specs/` and `notes/`) and published it public at github.com/mabaeyens/aura-android.
@@ -15,14 +17,14 @@ What is next on aura-android, roughly in order. This tracks the phased roadmap i
 
 ## Now
 
-- Port the remaining fetch-side types `WeatherSnapshot.make()` needs, then `make()` itself. Still missing: `Location` (INE + coords + `provinciaCode`), `StationObservation` (+ its nearest-station haversine) for `observacionTodas`, and the parse halves deferred so far (`CAPParser` + a tar reader for `avisos`, `OpenMeteoUV`, `MitecoAirQuality`). Once `make()` maps `MunicipioForecast`/`MunicipioHourly`/`UVIForecast`/observations/avisos into a snapshot, the `ActiveAlertTests`/`AirComponentsTests` Swift cases that gate it port too. The `municipioDiaria`/`municipioHoraria`/`uviCities` client calls it depends on are already in.
-- Port `AEMETClient`'s two-call envelope-then-`datos` model with Retrofit and OkHttp. First add Retrofit/OkHttp to `gradle/libs.versions.toml` (not there yet); reuse the `Json { ignoreUnknownKeys = true }` config the model tests already assume.
+- Continue Layer E (Compose UI), the visual primitives before the card suite. Next: `ConditionGlyph` (`ui/ConditionGlyph.kt`, a small composable over the remapped `WeatherIcon` glyph set). Then the card suite: split `AuraAppCards.swift` (1501 lines) into per-card composables under `ui/cards/*`, plus `AuraSunWindCards`/`AuraSummaryCards`/`AuraSunMoonCards`. Then the tap-through reference sheets (`AuraScaleSheets`/`AuraMoonSheet`/`AuraSolarSheet` → `ModalBottomSheet` under `ui/sheets/*`).
+- Add a `:app` unit-test source set. There is none yet, so the pure `AuraSunPath.from` position maths (and any later `:app`-side logic) is currently untested. It returns a Compose `Offset`, so it can't move back to `:core` without pulling Compose into `:core`; the test belongs in `:app`.
 
 ## Next
 
-- Port the rest of the pure logic: `MoonPhase` and `LunarTimes`, and `ForecastPhrase` (reproduce the seed derivation exactly, see the plan's parity note). (`WindDirection`, `UVIndex` and the `AirQuality` ICA scales are done; the MITECO client half of `AirQuality` is fetch-side and lands with the net layer.)
+- Layer D storage, the foundation the real screens need: `EncryptedSharedPreferences` for the AEMET key, a DataStore for `activeINE` + favourites + the `use24h` flag, and the app-private JSON snapshot cache (`read`/`write`/`upsert`/`prune` with TTL). One DataStore + one file serves both the app and the (later) Glance widget, since Glance shares the app process. Port `AuraTime` (java.time formatting, `es-ES`) here too — its `use24h` flag is a DataStore boolean.
 - Build the location layer per the local `specs/location.md`: a `:app` `LocationProvider` over the AOSP `LocationManager` that feeds a `Coordinate` into `SolarTimes` and the forecast. Handle the three no-fix states (permission denied, services off, no fix).
-- Stand up the repository layer (the `AEMETService` equivalent) and a first real "Hoy" screen over ported cards and a Compose `AuraSky`.
+- Stand up the repository layer (the `AEMETService` equivalent) and a first real "Hoy" screen over the ported cards and the Compose `AuraSky`.
 
 ## Later
 

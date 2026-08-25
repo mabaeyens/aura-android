@@ -6,17 +6,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mab.aura.core.air.AirComponent
+import com.mab.aura.core.air.AirQuality
 import com.mab.aura.core.model.DaySnapshot
 import com.mab.aura.core.model.HourSlot
 import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.NewsSource
+import com.mab.aura.core.model.UVHourSlot
 import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
+import com.mab.aura.core.uv.UVIndex
+import com.mab.aura.core.wind.WindDirection
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
@@ -123,6 +131,51 @@ private fun DailyCardPreview() {
     }
 }
 
+@Preview(name = "Wind card", widthDp = 380)
+@Composable
+private fun WindCardPreview() {
+    SkyPanel {
+        AuraWindCard(snapshot = sampleSnapshot, size = AuraSize.Phone)
+    }
+}
+
+@Preview(name = "Air quality card", widthDp = 380)
+@Composable
+private fun AirQualityCardPreview() {
+    SkyPanel {
+        AuraAirQualityCard(airQuality = sampleAirQuality, size = AuraSize.Phone)
+    }
+}
+
+@Preview(name = "UV card", widthDp = 380)
+@Composable
+private fun UVCardPreview() {
+    SkyPanel {
+        AuraUVCard(
+            uvIndex = UVIndex(8),
+            hourly = sampleUvHourly,
+            now = previewNow,
+            size = AuraSize.Phone,
+            cloudy = false,
+        )
+    }
+}
+
+@Preview(name = "Radar card", widthDp = 380)
+@Composable
+private fun RadarCardPreview() {
+    // A flat dark placeholder frame, enough to check the rounded image, the dBZ legend and the labels;
+    // the real reflectivity bytes come from the (later) net layer.
+    val frame = remember { previewRadarBitmap() }
+    SkyPanel {
+        AuraRadarCard(
+            radar = AuraRadarInfo(image = frame, siteName = "Madrid", time = previewNow.minus(Duration.ofMinutes(6))),
+            size = AuraSize.Phone,
+            now = previewNow,
+        )
+    }
+}
+
 // One representative snapshot the three forecast cards read from: a warm, mostly clear Madrid afternoon
 // with a passing shower later, six days ahead, and a low sun so the hero shows a real moment label.
 private val sampleSnapshot = WeatherSnapshot(
@@ -137,6 +190,8 @@ private val sampleSnapshot = WeatherSnapshot(
     currentHumidity = 34,
     currentPrecipProb = 10,
     windSpeed = 14,
+    windDirection = WindDirection.SO,
+    windGust = 34,
     // Madrid summer sun (UTC): ~07:00 local sunrise, ~21:15 local sunset, so previewNow (14:00 local) reads
     // as "Mediodía"/"Tarde".
     sunrise = Instant.parse("2026-08-25T05:00:00Z"),
@@ -169,3 +224,38 @@ private fun sampleNews(title: String, source: NewsSource, ago: Duration): NewsIt
     source = source,
     date = previewNow.minus(ago),
 )
+
+// A category-3 ("Regular") reading driven by O₃, with three of the five pollutants measured so the
+// breakdown row shows both real chips and greyed-out ones (PM10, SO₂).
+private val sampleAirQuality = AirQuality.create(
+    category = 3,
+    partial = false,
+    pollutant = "O3",
+    station = "Retiro",
+    distanceKm = 1.7,
+    measured = previewNow,
+    components = listOf(
+        AirComponent(pollutant = "NO2", value = 34.0, station = "Retiro", distanceKm = 1.7, measured = previewNow),
+        AirComponent(pollutant = "O3", value = 115.0, station = "Retiro", distanceKm = 1.7, measured = previewNow),
+        AirComponent(pollutant = "PM2.5", value = 12.0, station = "Retiro", distanceKm = 1.7, measured = previewNow),
+    ),
+)
+
+// One day of CAMS UV hours anchored on the feed's local midnight (00:00 UTC here), a summer curve peaking
+// just after solar noon. previewNow (12:00 UTC) lands mid-curve, so the strip shows a real "Ahora" value.
+private val sampleUvHourly: List<UVHourSlot> = run {
+    val start = Instant.parse("2026-08-25T00:00:00Z")
+    val uvByHour = doubleArrayOf(
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 1.8, 3.4, 5.1, 6.8, 8.2, 8.6,
+        8.1, 6.4, 4.3, 2.6, 1.2, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    )
+    uvByHour.mapIndexed { h, uv -> UVHourSlot(start.plusSeconds(h * 3600L), uv, uv) }
+}
+
+// A flat dark square standing in for a radar reflectivity frame in previews. android.graphics is available
+// under layoutlib, so a plain 4:3 bitmap is enough to exercise the card's image/legend/label layout.
+private fun previewRadarBitmap(): ImageBitmap {
+    val bmp = android.graphics.Bitmap.createBitmap(240, 180, android.graphics.Bitmap.Config.ARGB_8888)
+    bmp.eraseColor(android.graphics.Color.rgb(16, 36, 58))
+    return bmp.asImageBitmap()
+}

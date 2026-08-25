@@ -78,7 +78,12 @@ data class AirComponent(
         }
 
     companion object {
-        private val order = listOf("NO2", "O3", "PM2.5", "PM10", "SO2")
+        /**
+         * The canonical five ICA pollutants in display order (mirrors the official ICA listing). Public
+         * so the air-quality card can render a fixed column per pollutant — greyed for the ones a station
+         * doesn't measure — matching the Swift `public static let order`.
+         */
+        val order = listOf("NO2", "O3", "PM2.5", "PM10", "SO2")
 
         /**
          * Subscripted label for a bare MITECO magnitud token, so a column can be rendered for a

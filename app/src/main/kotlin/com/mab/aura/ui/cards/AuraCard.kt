@@ -74,6 +74,9 @@ enum class AuraSize {
  */
 internal operator fun TextUnit.minus(points: Int): TextUnit = (this.value - points).sp
 
+/** The additive twin of [minus], so a card can write Swift's `size.bodySize + 6`. Same `sp` assumption. */
+internal operator fun TextUnit.plus(points: Int): TextUnit = (this.value + points).sp
+
 /**
  * The frosted card. Padding, a translucent dark pane with a bottom-weighted scrim, and a hairline
  * border, matching the look of the Swift `AuraCard` (see the file KDoc for why there's no real blur).

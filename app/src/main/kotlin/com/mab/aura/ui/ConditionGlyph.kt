@@ -71,8 +71,10 @@ fun ConditionGlyph(
 }
 
 /** The bundled drawable for a [WeatherGlyph]. Day/night light-rain and the three thunder cases share a
- *  glyph — the monochrome Material set has no distinct sun-behind-rain or day/night storm variant. */
-private fun drawableFor(glyph: WeatherGlyph): Int = when (glyph) {
+ *  glyph — the monochrome Material set has no distinct sun-behind-rain or day/night storm variant.
+ *  `internal` so the Glance widget's hourly strip can reuse the exact same icon set (it can't call this
+ *  Composable, but it can map a glyph to the same drawable). */
+internal fun drawableFor(glyph: WeatherGlyph): Int = when (glyph) {
     WeatherGlyph.CLEAR_DAY -> R.drawable.ic_wx_clear_day
     WeatherGlyph.CLEAR_NIGHT -> R.drawable.ic_wx_clear_night
     WeatherGlyph.FEW_CLOUDS_DAY -> R.drawable.ic_wx_few_clouds_day

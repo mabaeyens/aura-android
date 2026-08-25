@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.solar.SolarTimes
+import com.mab.aura.ui.sheets.AuraDetailCard
+import com.mab.aura.ui.sheets.AuraSolarSheet
 import com.mab.aura.ui.theme.Palette
 import java.time.Duration
 import java.time.Instant
@@ -52,7 +54,7 @@ fun AuraSunArcCard(
     val sunset = snapshot.sunset
 
     AuraSection("Sol".uppercase(), size, modifier = modifier) {
-        AuraCard(size) {
+        AuraDetailCard(size, sheet = { onClose -> AuraSolarSheet(snapshot, now, onClose) }) {
             if (sunrise != null && sunset != null) {
                 // Today's solar solve for this location — the source of civil twilight. nil without coords.
                 val solar = coordinateSolar(snapshot, now)

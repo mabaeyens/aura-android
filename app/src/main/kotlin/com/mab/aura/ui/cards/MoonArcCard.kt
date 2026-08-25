@@ -27,6 +27,8 @@ import com.mab.aura.core.lunar.LunarPosition
 import com.mab.aura.core.lunar.LunarTimes
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.drawPhasedMoon
+import com.mab.aura.ui.sheets.AuraDetailCard
+import com.mab.aura.ui.sheets.AuraMoonSheet
 import com.mab.aura.ui.theme.Palette
 import java.time.Duration
 import java.time.Instant
@@ -55,7 +57,7 @@ fun AuraMoonArcCard(
     val moon = remember(snapshot.latitude, snapshot.longitude, now) { MoonState.solve(snapshot, now) }
 
     AuraSection("Luna".uppercase(), size, modifier = modifier) {
-        AuraCard(size) {
+        AuraDetailCard(size, sheet = { onClose -> AuraMoonSheet(snapshot, now, onClose) }) {
             val moonrise = moon.moonrise
             val moonset = moon.moonset
             if (moonrise != null && moonset != null) {

@@ -13,6 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.AuraWindRose
+import com.mab.aura.ui.sheets.AuraBeaufortSheet
+import com.mab.aura.ui.sheets.AuraDetailCard
 
 /**
  * The full-width wind card, ported from `AuraWindCard` in `AuraAppCards.swift`: the [AuraWindRose] compass
@@ -30,7 +32,7 @@ fun AuraWindCard(
     modifier: Modifier = Modifier,
 ) {
     AuraSection("Viento".uppercase(), size, modifier = modifier) {
-        AuraCard(size) {
+        AuraDetailCard(size, sheet = { onClose -> AuraBeaufortSheet(snapshot, onClose) }) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(size.stackSpacing),
                 verticalAlignment = Alignment.CenterVertically,

@@ -29,6 +29,11 @@ import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.core.wind.WindDirection
+import com.mab.aura.ui.sheets.AuraAirQualitySheet
+import com.mab.aura.ui.sheets.AuraBeaufortSheet
+import com.mab.aura.ui.sheets.AuraMoonSheet
+import com.mab.aura.ui.sheets.AuraSolarSheet
+import com.mab.aura.ui.sheets.AuraUVSheet
 import com.mab.aura.ui.sky.AuraSky
 import java.net.URI
 import java.time.Duration
@@ -195,6 +200,39 @@ private fun MoonArcCardPreview() {
     SkyPanel {
         AuraMoonArcCard(snapshot = sampleSnapshot, size = AuraSize.Phone, now = previewNow)
     }
+}
+
+// The tap-through reference sheets, each rendered on its own — they paint their own dark gradient edge to
+// edge (no SkyPanel needed) and fill the canvas. In the app these slide up as a ModalBottomSheet when a card
+// is tapped; here `onClose` is a no-op. Tall canvases so the scale rows / fact rows all show.
+@Preview(name = "Beaufort sheet", widthDp = 400, heightDp = 1100)
+@Composable
+private fun BeaufortSheetPreview() {
+    AuraBeaufortSheet(snapshot = sampleSnapshot, onClose = {})
+}
+
+@Preview(name = "Air quality sheet", widthDp = 400, heightDp = 1400)
+@Composable
+private fun AirQualitySheetPreview() {
+    AuraAirQualitySheet(airQuality = sampleAirQuality, now = previewNow, onClose = {})
+}
+
+@Preview(name = "UV sheet", widthDp = 400, heightDp = 900)
+@Composable
+private fun UVSheetPreview() {
+    AuraUVSheet(uvIndex = UVIndex(8), cloudy = true, onClose = {})
+}
+
+@Preview(name = "Solar sheet", widthDp = 400, heightDp = 800)
+@Composable
+private fun SolarSheetPreview() {
+    AuraSolarSheet(snapshot = sampleSnapshot, now = previewNow, onClose = {})
+}
+
+@Preview(name = "Moon sheet", widthDp = 400, heightDp = 700)
+@Composable
+private fun MoonSheetPreview() {
+    AuraMoonSheet(snapshot = sampleSnapshot, now = previewNow, onClose = {})
 }
 
 // The whole "Hoy" screen: the full card stack over the sky, in the app's scroll host. Two variants exercise

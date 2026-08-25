@@ -27,6 +27,8 @@ import com.mab.aura.core.model.UVNow
 import com.mab.aura.core.model.current
 import com.mab.aura.core.model.todaySlots
 import com.mab.aura.core.uv.UVIndex
+import com.mab.aura.ui.sheets.AuraDetailCard
+import com.mab.aura.ui.sheets.AuraUVSheet
 import com.mab.aura.ui.theme.Palette
 import java.time.Instant
 import kotlin.math.max
@@ -60,7 +62,7 @@ fun AuraUVCard(
     val today = hourly.todaySlots(now).filter { it.uv > 0 }
 
     AuraSection("Índice UV".uppercase(), size, modifier = modifier) {
-        AuraCard(size) {
+        AuraDetailCard(size, sheet = { onClose -> AuraUVSheet(uvIndex, cloudy, onClose) }) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(size.stackSpacing),

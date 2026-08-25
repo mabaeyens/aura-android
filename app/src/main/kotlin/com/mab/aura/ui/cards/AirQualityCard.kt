@@ -23,7 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mab.aura.core.air.AirComponent
 import com.mab.aura.core.air.AirQuality
+import com.mab.aura.ui.sheets.AuraAirQualitySheet
+import com.mab.aura.ui.sheets.AuraDetailCard
 import com.mab.aura.ui.theme.Palette
+import java.time.Instant
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -48,7 +51,7 @@ fun AuraAirQualityCard(
     val showComponents = airQuality.components.isNotEmpty()
 
     AuraSection("Calidad del aire".uppercase(), size, modifier = modifier) {
-        AuraCard(size) {
+        AuraDetailCard(size, sheet = { onClose -> AuraAirQualitySheet(airQuality, Instant.now(), onClose) }) {
             Column(verticalArrangement = Arrangement.spacedBy(if (showComponents) 12.dp else 0.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(size.stackSpacing),

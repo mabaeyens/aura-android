@@ -113,9 +113,10 @@ internal fun AuraCard(
 internal fun AuraSection(
     title: String,
     size: AuraSize,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
             fontSize = size.titleSize,

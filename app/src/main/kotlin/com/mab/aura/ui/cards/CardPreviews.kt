@@ -11,9 +11,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mab.aura.core.model.DaySnapshot
+import com.mab.aura.core.model.HourSlot
 import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.NewsSource
 import com.mab.aura.core.model.WeatherAlert
+import com.mab.aura.core.model.WeatherSnapshot
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
@@ -93,6 +96,71 @@ private fun NewsCardPreview() {
         )
     }
 }
+
+@Preview(name = "Hero card", widthDp = 380)
+@Composable
+private fun HeroCardPreview() {
+    SkyPanel {
+        AuraHeroCard(snapshot = sampleSnapshot, size = AuraSize.Phone, now = previewNow)
+    }
+}
+
+@Preview(name = "Hourly card", widthDp = 380)
+@Composable
+private fun HourlyCardPreview() {
+    SkyPanel {
+        // scrolls = false so the preview lays the first five hours out edge to edge (Android Studio's
+        // preview can render a horizontal scroll, but the still is clearer with all five visible).
+        AuraHourlyCard(hours = sampleSnapshot.hours, size = AuraSize.Phone, scrolls = false)
+    }
+}
+
+@Preview(name = "Daily card", widthDp = 380)
+@Composable
+private fun DailyCardPreview() {
+    SkyPanel {
+        AuraDailyCard(days = sampleSnapshot.days, size = AuraSize.Phone)
+    }
+}
+
+// One representative snapshot the three forecast cards read from: a warm, mostly clear Madrid afternoon
+// with a passing shower later, six days ahead, and a low sun so the hero shows a real moment label.
+private val sampleSnapshot = WeatherSnapshot(
+    ine = "28079",
+    localidad = "Madrid",
+    provincia = "Madrid",
+    tempMin = 18,
+    tempMax = 33,
+    humedadMax = 55,
+    currentTemp = 31,
+    currentSky = "12",
+    currentHumidity = 34,
+    currentPrecipProb = 10,
+    windSpeed = 14,
+    // Madrid summer sun (UTC): ~07:00 local sunrise, ~21:15 local sunset, so previewNow (14:00 local) reads
+    // as "Mediodía"/"Tarde".
+    sunrise = Instant.parse("2026-08-25T05:00:00Z"),
+    sunset = Instant.parse("2026-08-25T19:15:00Z"),
+    hours = listOf(
+        HourSlot(hour = 14, temp = 31, sky = "12", precipProb = 0),
+        HourSlot(hour = 15, temp = 32, sky = "12", precipProb = 0),
+        HourSlot(hour = 16, temp = 33, sky = "13", precipProb = 15),
+        HourSlot(hour = 17, temp = 32, sky = "43", precipProb = 35),
+        HourSlot(hour = 18, temp = 30, sky = "14", precipProb = 20),
+        HourSlot(hour = 19, temp = 28, sky = "12", precipProb = 5),
+        HourSlot(hour = 20, temp = 25, sky = "11", precipProb = 0),
+        HourSlot(hour = 21, temp = 23, sky = "11n", precipProb = 0),
+    ),
+    days = listOf(
+        DaySnapshot(date = previewNow, min = 18, max = 33, sky = "12", probPrecip = 10),
+        DaySnapshot(date = previewNow.plus(Duration.ofDays(1)), min = 19, max = 34, sky = "11", probPrecip = 0),
+        DaySnapshot(date = previewNow.plus(Duration.ofDays(2)), min = 20, max = 35, sky = "11", probPrecip = 0),
+        DaySnapshot(date = previewNow.plus(Duration.ofDays(3)), min = 17, max = 29, sky = "43", probPrecip = 45),
+        DaySnapshot(date = previewNow.plus(Duration.ofDays(4)), min = 15, max = 26, sky = "14", probPrecip = 30),
+        DaySnapshot(date = previewNow.plus(Duration.ofDays(5)), min = 16, max = 28, sky = "13", probPrecip = 15),
+    ),
+    updated = previewNow,
+)
 
 private var previewLink = 0
 private fun sampleNews(title: String, source: NewsSource, ago: Duration): NewsItem = NewsItem(

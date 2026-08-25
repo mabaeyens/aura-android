@@ -1,0 +1,134 @@
+package com.mab.aura.ui.cards
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.mab.aura.core.model.HourSlot
+import com.mab.aura.ui.ConditionGlyph
+import com.mab.aura.ui.theme.Palette
+
+/**
+ * The horizontal "Próximas horas" strip, ported from `AuraHourlyCard` in `AuraAppCards.swift`. Five hour
+ * columns fit the card width and the strip scrolls to the rest of the day; each column is hour, condition
+ * glyph, temperature, and (only when some hour carries a chance) rain percent, stacked so the rows line up
+ * across every column.
+ *
+ * Two Android-specific choices:
+ *
+ * 1. **Columns, not a measured [androidx.compose.foundation.layout] Grid.** SwiftUI used a `Grid` and
+ *    measured a column width so five filled the viewport. Here a [BoxWithConstraints] reads the card's inner
+ *    width and each column takes a fifth of it; the rows still align because every column has the identical
+ *    stack and the glyph sits in a fixed-footprint [ConditionGlyph] slot, so a wide rain cloud and a narrow
+ *    sun don't knock the temperature row out of line.
+ * 2. **Glyph day/night from the code.** SwiftUI drew a multicolour SF Symbol straight from the sky code.
+ *    [ConditionGlyph] takes an explicit `isNight`, so it's read back off the code's own "n" suffix here,
+ *    matching what the Swift symbol lookup did. Neutral glyphs render white via [LocalContentColor]; the
+ *    glyph's own special cases (the night moon's blue, the forced-white snowflake) still win.
+ *
+ * [scrolls] mirrors the Swift flag: on device (`true`) the strip scrolls; off (`false`) the first five hours
+ * spread edge to edge, for the offline render path that can't lay out a horizontal scroll.
+ */
+@Composable
+fun AuraHourlyCard(
+    hours: List<HourSlot>,
+    size: AuraSize,
+    modifier: Modifier = Modifier,
+    scrolls: Boolean = true,
+) {
+    // True when at least one hour carries a rain chance — otherwise the precip row is empty and dropped, so a
+    // dry strip doesn't reserve a band of empty space at the card's bottom.
+    val showPrecip = hours.any { (it.precipProb ?: 0) > 0 }
+
+    AuraSection("Próximas horas".uppercase(), size, modifier = modifier) {
+        AuraCard(size) {
+            if (scrolls) {
+                // The card's inner width is the viewport; a fifth of it is one column, so five fit and the
+                // rest of the day scrolls past the right edge.
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val columnWidth = maxWidth / 5
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        hours.forEach { h ->
+                            HourColumn(h, size, showPrecip, Modifier.width(columnWidth))
+                        }
+                    }
+                }
+            } else {
+                // Offline preview: the first five, each taking an even share of the width.
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    hours.take(5).forEach { h ->
+                        HourColumn(h, size, showPrecip, Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One hour's column: label, glyph, temperature, and the optional rain percent, all centred. */
+@Composable
+private fun HourColumn(
+    h: HourSlot,
+    size: AuraSize,
+    showPrecip: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = hourLabel(h.hour),
+            fontSize = size.smallSize,
+            fontWeight = FontWeight.Medium,
+            color = Color.White.copy(alpha = 0.75f),
+            textAlign = TextAlign.Center,
+        )
+        // Neutral glyphs read white; ConditionGlyph still forces the night moon blue and the snowflake white.
+        CompositionLocalProvider(LocalContentColor provides Color.White) {
+            ConditionGlyph(
+                sky = h.sky,
+                isNight = h.sky?.endsWith("n") == true,
+                slot = size.iconSize + 6.dp,
+            )
+        }
+        Text(
+            text = h.temp?.let { "$it°" } ?: "—",
+            fontSize = size.bodySize - 2,
+            fontWeight = FontWeight.Bold,
+            color = Palette.temperature(h.temp),
+            textAlign = TextAlign.Center,
+        )
+        if (showPrecip) {
+            Text(
+                text = h.precipProb?.let { if (it > 0) "$it%" else "" } ?: "",
+                fontSize = size.smallSize - 1,
+                fontWeight = FontWeight.SemiBold,
+                color = auraPrecipColor,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * The hour label, e.g. "18h". The 12/24h preference lives in the settings store (Layer D) once it lands and
+ * `AuraTime` is ported; until then this follows the Spanish 24h default `AuraTime.hourLabel` uses, matching
+ * the same interim choice the alert card's validity formatter makes.
+ */
+private fun hourLabel(hour: Int): String = "${hour}h"

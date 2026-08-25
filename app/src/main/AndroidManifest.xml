@@ -45,6 +45,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/aura_widget_info" />
         </receiver>
+
+        <!--
+          The widget's configuration screen (the per-widget location picker, iOS's SelectLocationIntent). The
+          launcher starts it via the explicit component named in aura_widget_info's android:configure, so it
+          stays exported=false. The intent-filter marks it as an appwidget config activity.
+        -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Aura">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

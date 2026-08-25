@@ -19,8 +19,8 @@ object SharedSnapshot {
 
     /**
      * The snapshot to show, or null when nothing has been cached yet (the widget then shows its empty state).
-     * [preferredINE] is the widget's own configured location; this increment has no per-widget picker, so it
-     * is left null and the widget follows the app's active location.
+     * [preferredINE] is the tile's own pinned location (from `WidgetConfigActivity`); null, or a pin whose
+     * place is no longer cached, falls through to the app's active location and then the first cache entry.
      */
     suspend fun resolve(context: Context, preferredINE: String? = null): WeatherSnapshot? {
         val cached = SnapshotCache(context).read()

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -21,7 +22,9 @@ import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -63,9 +66,15 @@ class AuraGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // Each tile can pin its own place (WidgetConfigActivity writes the INE into this widget's own Glance
+        // state, keyed per GlanceId). A tile that was never configured has no pin, so it follows the app's
+        // active location — that fallback lives in SharedSnapshot.resolve, which treats a null/stale pin as
+        // "use the app's active location, then the first cache entry".
+        val pinnedINE = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)[PINNED_INE_KEY]
+
         // The cache read (file + DataStore) is suspending, so it happens here, outside the composition; the
         // gradient bitmap is likewise built once per update, not per recomposition.
-        val snapshot = SharedSnapshot.resolve(context)
+        val snapshot = SharedSnapshot.resolve(context, pinnedINE)
         val use24h = Settings(context).use24h.first()
         val background = snapshot?.let { skyGradientBitmap(it.currentSky) }
 
@@ -74,6 +83,13 @@ class AuraGlanceWidget : GlanceAppWidget() {
         }
     }
 }
+
+/**
+ * The per-widget pinned INE, stored in each tile's own Glance preferences (the default
+ * [PreferencesGlanceStateDefinition]). Written by [WidgetConfigActivity], read in [AuraGlanceWidget.provideGlance].
+ * Absent means "follow the app's active location".
+ */
+internal val PINNED_INE_KEY = stringPreferencesKey("pinned_ine")
 
 private val White = ColorProvider(Color.White)
 private val WhiteDim = ColorProvider(Color(0xE6FFFFFF))

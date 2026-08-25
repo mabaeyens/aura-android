@@ -5,8 +5,12 @@
 
   initialLayout points at Glance's bundled loading layout, shown for the instant before the first
   provideGlance runs. updatePeriodMillis is the system's own re-render nudge (clamped to 30 min minimum) —
-  it re-reads the cache and refreshes the time-of-day sky, but never fetches; a real background data refresh
-  is WorkManager's job in a later increment. Sizes target a 2x2 cell, resizable in both directions.
+  it re-reads the cache and refreshes the time-of-day sky, but never fetches; the real background data refresh
+  is WorkManager's job. Sizes target a 2x2 cell, resizable in both directions.
+
+  configure names the per-widget location picker (WidgetConfigActivity). widgetFeatures (API 31+, ignored
+  below that) marks it: configuration_optional so a tile can be placed without the picker and just follow the
+  app's active location, and reconfigurable so the picker can be reopened later from the tile's own menu.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
@@ -18,4 +22,6 @@
     android:previewImage="@drawable/aura_widget_preview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:configure="com.mab.aura.widget.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_description" />

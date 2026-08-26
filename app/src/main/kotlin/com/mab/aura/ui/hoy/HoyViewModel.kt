@@ -6,12 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.mab.aura.core.geo.SpainCities
 import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.model.Location
+import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.WeatherSnapshot
+import com.mab.aura.core.net.NewsService
 import com.mab.aura.core.time.AuraTime
+import com.mab.aura.data.RadarRepository
 import com.mab.aura.data.WeatherRepository
 import com.mab.aura.location.LocationProvider
 import com.mab.aura.location.LocationResult
 import com.mab.aura.store.Settings
+import com.mab.aura.ui.cards.AuraRadarInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +25,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -34,6 +39,8 @@ import kotlinx.coroutines.launch
 class HoyViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = WeatherRepository(app)
+    private val radarRepository = RadarRepository(app)
+    private val newsService = NewsService()
     private val settings = Settings(app)
     private val locationProvider = LocationProvider(app)
 
@@ -58,6 +65,9 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             settings.activeINE.drop(1).distinctUntilChanged().collect { load() }
         }
+        // Tidy stale radar frames left in the cache from earlier sessions (>24 h), matching iOS's launch-time
+        // prune. Cheap and off the main path — the live TTL is 10 min, so these are dead weight.
+        radarRepository.pruneCache()
         load()
     }
 
@@ -88,6 +98,31 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
                 fresh != null -> HoyUiState.Content(fresh, notice = error, locationFallback = resolved.fallback)
                 // Nothing cached and the refresh failed: a full error state with a retry.
                 else -> HoyUiState.Error(error ?: "No se pudo obtener la información.")
+            }
+
+            // Radar and news are fetched lazily, after the forecast is on screen and off other hosts (news is
+            // public RSS; radar goes through AEMET but on its own 10-min cadence). Each fills its card in when it
+            // arrives; a failure just leaves that card absent. They must never block or fail the forecast above.
+            if (fresh != null) loadExtras(location)
+        }
+    }
+
+    /**
+     * Fetch the radar frame and the news stream for [location] concurrently, folding each into the current
+     * [HoyUiState.Content] as it lands. Guarded by INE: if the user has since switched place (the state now
+     * shows a different snapshot), a late result is dropped rather than painting the wrong location's card.
+     */
+    private fun loadExtras(location: Location) {
+        viewModelScope.launch {
+            val frame = radarRepository.frame(location)
+            _state.update { s ->
+                if (s is HoyUiState.Content && s.snapshot.ine == location.ine) s.copy(radar = frame) else s
+            }
+        }
+        viewModelScope.launch {
+            val items = newsService.latest()
+            _state.update { s ->
+                if (s is HoyUiState.Content && s.snapshot.ine == location.ine) s.copy(news = items) else s
             }
         }
     }
@@ -146,11 +181,15 @@ sealed interface HoyUiState {
      * Weather to show. [notice] is a non-blocking banner (e.g. "offline, showing last data"), or null.
      * [locationFallback] is set only when we couldn't use the device position and fell back to a default place,
      * so the screen can explain why; the screen maps it to text and decides when to show it (see [LocationFallback]).
+     * [radar] and [news] arrive after the forecast (fetched separately, kept out of the snapshot); they start
+     * null/empty and fill in when their fetch lands, so their cards appear a moment later.
      */
     data class Content(
         val snapshot: WeatherSnapshot,
         val notice: String? = null,
         val locationFallback: LocationFallback? = null,
+        val radar: AuraRadarInfo? = null,
+        val news: List<NewsItem> = emptyList(),
     ) : HoyUiState
 
     /** No data at all and the refresh failed; the screen offers a retry. */

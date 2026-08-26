@@ -5,7 +5,6 @@ import org.w3c.dom.Element
 import java.io.ByteArrayInputStream
 import java.time.Instant
 import java.time.OffsetDateTime
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Parses one AEMET CAP-XML alert file into [WeatherAlert]s — one per warning zone in each Spanish `<info>`
@@ -24,13 +23,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 object CAPParser {
     fun parse(xml: ByteArray): List<WeatherAlert> {
         val doc = try {
-            val factory = DocumentBuilderFactory.newInstance().apply {
-                isNamespaceAware = false
-                // Harden against XXE: no DOCTYPE, no external entities. AEMET's CAP files carry none.
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-                isExpandEntityReferences = false
-            }
-            factory.newDocumentBuilder().parse(ByteArrayInputStream(xml))
+            // Shared XXE-hardened factory that also parses on Android (see hardenedXmlFactory): the Apache
+            // disallow-doctype-decl feature throws on Android's parser, which would otherwise abort every parse
+            // on-device and silently drop all alerts, exactly as it did the news feeds.
+            hardenedXmlFactory().newDocumentBuilder().parse(ByteArrayInputStream(xml))
         } catch (_: Exception) {
             return emptyList()
         }

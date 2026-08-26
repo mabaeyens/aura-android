@@ -60,8 +60,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.cards.AuraForecastStack
+import com.mab.aura.ui.cards.AuraRadarInfo
 import com.mab.aura.ui.cards.AuraSize
 import com.mab.aura.ui.sky.AuraSky
 import java.time.Instant
@@ -137,7 +139,7 @@ fun HoyScreen(
                 // One banner slot, so a data problem (offline, rate-limited) takes priority over the softer
                 // "showing a default location" note; the latter shows only when the fetch itself was fine.
                 val effectiveNotice = s.notice ?: locationFallbackText(s.locationFallback, permissionAsked)
-                HoyContent(snapshot = s.snapshot, notice = effectiveNotice, now = now)
+                HoyContent(snapshot = s.snapshot, notice = effectiveNotice, now = now, radar = s.radar, news = s.news)
             }
 
             is HoyUiState.Error -> CenteredMessage {
@@ -221,7 +223,13 @@ private fun locationFallbackText(fallback: LocationFallback?, permissionAsked: B
 
 /** The weather itself: the card stack in a vertical scroll over the sky, as the app lays it out. */
 @Composable
-private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant) {
+private fun HoyContent(
+    snapshot: WeatherSnapshot,
+    notice: String?,
+    now: Instant,
+    radar: AuraRadarInfo?,
+    news: List<NewsItem>,
+) {
     // [BoxWithConstraints] hands us the viewport height (maxHeight) before the scroll, so we can stretch the
     // hero to fill one screenful and push every forecast card *fully* below the fold, matching iOS: the opening
     // screen is just the sky and the editorial summary, nothing of the next card showing. The fill height is
@@ -264,7 +272,14 @@ private fun HoyContent(snapshot: WeatherSnapshot, notice: String?, now: Instant)
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
-            AuraForecastStack(snapshot = snapshot, size = AuraSize.Phone, now = now, heroFillHeight = heroFill)
+            AuraForecastStack(
+                snapshot = snapshot,
+                size = AuraSize.Phone,
+                now = now,
+                radar = radar,
+                news = news,
+                heroFillHeight = heroFill,
+            )
         }
 
         // The scroll cue: a gentle chevron pinned above the nav bar, shown only at the top of the scroll and

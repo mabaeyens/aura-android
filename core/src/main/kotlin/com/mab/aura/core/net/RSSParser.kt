@@ -8,7 +8,6 @@ import java.net.URI
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Parses one source's RSS 2.0 payload into [NewsItem]s and merges per-source streams into one.
@@ -155,13 +154,9 @@ private object RSSParser {
 
     fun parse(data: ByteArray): List<RawItem> {
         val doc = try {
-            val factory = DocumentBuilderFactory.newInstance().apply {
-                isNamespaceAware = false
-                // Harden against XXE, matching CAPParser: no DOCTYPE, no external entities.
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-                isExpandEntityReferences = false
-            }
-            factory.newDocumentBuilder().parse(ByteArrayInputStream(data))
+            // Shared XXE-hardened factory that also works on Android's XML parser (see hardenedXmlFactory —
+            // the Apache disallow-doctype-decl feature throws there and would otherwise abort every parse).
+            hardenedXmlFactory().newDocumentBuilder().parse(ByteArrayInputStream(data))
         } catch (_: Exception) {
             return emptyList()
         }

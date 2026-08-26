@@ -4,22 +4,21 @@ There is no release pipeline yet. This document is the plan for when there is on
 
 ## Today
 
-Debug builds only:
+Two builds:
 
 ```bash
-./gradlew :app:assembleDebug
+./gradlew :app:assembleDebug     # unsigned debug, for my own device and the emulator
+./gradlew :app:assembleRelease   # signed release APK (needs keystore.properties, see Phase 1)
 ```
 
-The debug APK is not signed for distribution and is only for my own device and the emulator.
+## Phase 1: a signed APK for a first tester or two — done
 
-## Phase 1: a signed APK for a first tester or two
+Release signing is wired, so `assembleRelease` produces a directly-installable signed APK with no store involved.
 
-The first real distribution is a directly-installed signed APK, no store involved:
-
-1. Create an upload keystore once, and keep it out of the repo. It is gitignored (`*.jks`, `*.keystore`, `keystore.properties`), and if it is ever lost, an existing install can only be replaced by a fresh reinstall, so it is backed up off the machine.
-2. Add a signing config that reads the keystore path and passwords from a local, gitignored `keystore.properties`, never from committed code.
-3. Build the release APK with `./gradlew :app:assembleRelease`.
-4. Send the signed APK as a link. The installer taps through one "allow installing from this source" prompt, which is a per-app toggle on modern Android, not a scary global setting.
+1. The upload keystore lives outside the repo at `~/.aura-android/aura-upload.jks`, so a `git clean` in the project can never delete it, and it is backed up off the machine. It is a 4096-bit RSA key valid well past 2050. If it is ever lost, an existing install can only be replaced by a fresh reinstall.
+2. `app/build.gradle.kts` reads the keystore path and passwords from a gitignored `keystore.properties` at the repo root, never from committed code. When that file is absent (a clean checkout or CI) the release build still runs, just unsigned.
+3. Build the signed APK with `./gradlew :app:assembleRelease`. It lands at `app/build/outputs/apk/release/app-release.apk`, signed with APK Signature Scheme v2, which is enough for minSdk 26.
+4. Install it directly over USB or wireless adb (`adb install -r <apk>`), or send it as a link. The installer taps through one "allow installing from this source" prompt, a per-app toggle on modern Android, not a scary global setting.
 
 ## Phase 2: Play internal testing
 

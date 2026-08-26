@@ -1,9 +1,23 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Release signing is driven by a gitignored keystore.properties at the repo root, which points at a
+// keystore kept OUTSIDE the repo tree (see docs/RELEASE.md, Phase 1). Neither the keystore nor its
+// passwords ever enter git. On a clean checkout or CI the file is simply absent, and the release build
+// stays unsigned (assembleRelease still runs, it just produces an unsigned APK you can't install as a
+// real distribution). Android-note: this is the standard "load a Properties file in the build script"
+// pattern, the Kotlin-DSL equivalent of iOS reading signing settings from a local xcconfig.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -18,6 +32,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +50,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Sign only when the local keystore.properties is present; otherwise leave the release
+            // unsigned rather than failing the build for someone without the signing secrets.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

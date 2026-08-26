@@ -45,6 +45,12 @@ data class WeatherSnapshot(
     val observedTemp: Int? = null,
     /** Name of the station [observedTemp] came from, e.g. "Madrid Retiro". */
     val observedStation: String? = null,
+    /** How far the resolving station sits from the location, km; null when no station resolved. */
+    val observedStationDistanceKm: Double? = null,
+    /** Which surface metrics the resolving station actually reports (for the station card's chips). */
+    val observedMetrics: ObservedMetrics = ObservedMetrics(),
+    /** The resolving station's full surface reading (temp/wind/humidity/pressure/rain), for the station card. */
+    val observedReading: ObservedReading? = null,
     /** AEMET sky-state code for the current hour (e.g. "11", "13n"), for the condition icon. */
     val currentSky: String? = null,
     /** AEMET's Spanish description of the current sky state (e.g. "Despejado"). */

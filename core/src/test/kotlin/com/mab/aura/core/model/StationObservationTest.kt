@@ -135,6 +135,71 @@ class StationObservationTest {
         assertEquals("3195", listOf(fresh).nearest(to = madrid)?.idema)
     }
 
+    // --- reading (surface values in display units) ---
+
+    @Test
+    fun reading_convertsWindToKmhAndSnapsDirection() {
+        // AEMET reports station wind in m/s; the app shows km/h (×3.6). 10 m/s → 36 km/h; 90° → E.
+        val full = StationObservation(idema = "3195", ubi = "MADRID RETIRO", lat = 40.4, lon = -3.7,
+            ta = 23.6, hr = 55.4, vv = 10.0, dv = 90.0, pres = 1013.6, prec = 0.2, fint = fint(now))
+        val r = full.reading
+        assertEquals(24, r.temperature)
+        assertEquals(55, r.humidity)
+        assertEquals(36, r.windKmh)
+        assertEquals(com.mab.aura.core.wind.WindDirection.E, r.windDirection)
+        assertEquals(1014, r.pressure)
+        assertEquals(0.2, r.precipMm!!, 1e-9)
+    }
+
+    @Test
+    fun reading_nullsMetricsTheStationOmits() {
+        // A temperature-only station leaves every other reading field null.
+        val r = StationObservation(idema = "x", ubi = "X", lat = 40.4, lon = -3.7, ta = 20.0, fint = fint(now)).reading
+        assertEquals(20, r.temperature)
+        assertNull(r.humidity)
+        assertNull(r.windKmh)
+        assertNull(r.windDirection)
+        assertNull(r.pressure)
+        assertNull(r.precipMm)
+    }
+
+    // --- availableMetrics ---
+
+    @Test
+    fun availableMetrics_flagsOnlyReportedFields() {
+        val partial = StationObservation(idema = "x", ubi = "X", lat = 40.4, lon = -3.7,
+            ta = 20.0, hr = 50.0, dv = 90.0, fint = fint(now))   // temp + humidity + a direction but no speed
+        val m = partial.availableMetrics
+        assertEquals(true, m.contains(ObservedMetrics.TEMPERATURE))
+        assertEquals(true, m.contains(ObservedMetrics.HUMIDITY))
+        // A direction (dv) with no speed (vv) must NOT count as measuring wind.
+        assertEquals(false, m.contains(ObservedMetrics.WIND))
+        assertEquals(false, m.contains(ObservedMetrics.PRESSURE))
+        assertEquals(false, m.contains(ObservedMetrics.PRECIPITATION))
+    }
+
+    @Test
+    fun availableMetrics_allFiveWhenFullyReported() {
+        val full = StationObservation(idema = "x", ubi = "X", lat = 40.4, lon = -3.7,
+            ta = 20.0, hr = 50.0, vv = 3.0, dv = 90.0, pres = 1010.0, prec = 0.0, fint = fint(now))
+        val all = ObservedMetrics.TEMPERATURE or ObservedMetrics.WIND or ObservedMetrics.HUMIDITY or
+            ObservedMetrics.PRESSURE or ObservedMetrics.PRECIPITATION
+        assertEquals(true, full.availableMetrics.contains(all))
+    }
+
+    // --- distanceKm ---
+
+    @Test
+    fun distanceKm_measuresToTheStationAndNullsWithoutCoords() {
+        val madrid = Location(ine = "28079", nombre = "Madrid", provincia = "Madrid",
+            latitude = madridLat, longitude = madridLon)
+        // Retiro sits ~1.8 km from Madrid centre.
+        val km = retiro(fint(now), 24.0).distanceKm(to = madrid)!!
+        assertEquals(1.8, km, 0.5)
+        // A reading with no coordinates can't be placed.
+        assertNull(StationObservation(idema = "x", ubi = "X", lat = null, lon = null, ta = 20.0).distanceKm(to = madrid))
+    }
+
     private fun obs(
         ta: Double? = null,
         fint: String? = null,

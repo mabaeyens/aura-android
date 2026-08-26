@@ -7,6 +7,7 @@ import com.mab.aura.core.model.Location
 import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.model.make
+import com.mab.aura.core.model.nearest
 import com.mab.aura.core.model.topActive
 import com.mab.aura.core.net.AemetClient
 import com.mab.aura.core.net.AemetClientException
@@ -37,11 +38,11 @@ import java.time.Instant
  * has no bulk municipal-forecast endpoint, so each location is still its own call; the shared national feeds
  * (air quality, UV cities, avisos) are fetched once per refresh and sliced locally.
  *
- * Divergences from the Swift, all because their `:core` support isn't ported yet (see the deferrals in
- * `AemetClient` and the plan): the nearest-station observed temperature (`observacionTodas`) and the
- * community bulletin (`comunidadBulletin`) are not fetched, so those snapshot fields stay null; and there is
- * no widget/Watch reload or notification step (no widget or watch surface on Android yet). Everything else —
- * the prune, the one-hour staleness skip, the per-source composition into [WeatherSnapshot.make] — is faithful.
+ * One divergence from the Swift remains, because its `:core` support isn't ported yet: the community bulletin
+ * (`comunidadBulletin`) is not fetched, so that snapshot field stays null. (The nearest-station observation
+ * `observacionTodas` is now fetched — it feeds the observed temperature and the station card.) There is also
+ * no Watch reload or notification step (no watch surface on Android). Everything else — the prune, the one-hour
+ * staleness skip, the per-source composition into [WeatherSnapshot.make] — is faithful.
  */
 class WeatherRepository(context: Context) {
 
@@ -128,6 +129,11 @@ class WeatherRepository(context: Context) {
         // INE. A failure just leaves the UV card hidden.
         val uvCities = runCatching { client.uviCities(dia = 0) }.getOrElse { note(it); emptyList() }
 
+        // Every recent surface observation from AEMET's conventional network, one call for every location;
+        // resolved per location to the nearest recent station below. A failure just leaves the station card
+        // (and the observed temperature) hidden.
+        val observations = runCatching { client.observacionTodas() }.getOrElse { note(it); emptyList() }
+
         // Fetch each distinct avisos area at most once, then resolve per location by province.
         val areas = stale.mapNotNull { AvisoArea.forProvincia(it.provinciaCode) }.toSet()
         val alertsByArea = HashMap<String, List<WeatherAlert>>()
@@ -147,6 +153,10 @@ class WeatherRepository(context: Context) {
             val airQuality: AirQuality? = MitecoAirQuality.composite(breakdown)
                 ?: MitecoAirQuality.nearest(location.latitude, location.longitude, airStations)
 
+            // The nearest recent station to this location (freshest per station, within 3 h and 35 km), or
+            // null when none qualifies — then the station card and observed temperature stay hidden.
+            val observed = observations.nearest(to = location)
+
             val uvIndex = UVIndex.pick(location.ine, uvCities)
             // Hourly UV from CAMS via Open-Meteo — the per-hour granularity AEMET doesn't publish. Never
             // blocks; an empty result just hides the hourly curve.
@@ -161,6 +171,7 @@ class WeatherRepository(context: Context) {
                 location = location,
                 daily = daily,
                 hourly = hourly,
+                observed = observed,
                 alert = alert,
                 airQuality = airQuality,
                 uvIndex = uvIndex,

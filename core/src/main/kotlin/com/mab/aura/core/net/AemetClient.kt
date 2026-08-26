@@ -2,6 +2,7 @@ package com.mab.aura.core.net
 
 import com.mab.aura.core.model.MunicipioForecast
 import com.mab.aura.core.model.MunicipioHourly
+import com.mab.aura.core.model.StationObservation
 import com.mab.aura.core.model.UVIForecast
 import com.mab.aura.core.model.WeatherAlert
 import kotlinx.coroutines.Dispatchers
@@ -47,9 +48,8 @@ sealed class AemetClientException(message: String) : Exception(message) {
  * [baseUrl] and [httpClient] are injectable instead (OkHttp's `MockWebServer` in tests). Swift's `async`
  * throwing methods become `suspend` functions that throw [AemetClientException].
  *
- * Not ported yet, because their supporting types are still deferred to later net-layer steps: `observacionTodas`
- * (needs `StationObservation`) and the plain-text `hoy` bulletin helpers. The [fetchText]/[fetchBinary] engine
- * they build on is here, so they are a thin addition later.
+ * Still deferred: the plain-text `hoy` community-bulletin helpers (their normalized-text products aren't
+ * ported yet). The [fetchText]/[fetchBinary] engine they build on is here, so they are a thin addition later.
  */
 class AemetClient(
     private val apiKey: String,
@@ -206,6 +206,14 @@ class AemetClient(
      */
     suspend fun uviCities(dia: Int = 0): List<UVIForecast.City> =
         fetch("/prediccion/especifica/uvi/$dia", UVIForecast.serializer()).ciudad
+
+    /**
+     * Every recent surface observation from AEMET's conventional station network, in one call — many records
+     * per station across the country. One fetch serves every location; resolve per location to the nearest
+     * recent station with `List<StationObservation>.nearest(to:)`. Powers the "Estación de observación" card.
+     */
+    suspend fun observacionTodas(): List<StationObservation> =
+        fetch("/observacion/convencional/todas", ListSerializer(StationObservation.serializer()))
 
     /**
      * The latest regional radar image (a ~240 km-radius reflectivity frame). Raw image bytes (GIF/PNG); pick

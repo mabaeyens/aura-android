@@ -1,0 +1,19 @@
+<!--
+    Cloud with rain, the Android stand-in for iOS's SF Symbol "cloud.rain.fill" (the precipitation chip on
+    the observation-station card). A monochrome cloud with three drops; kept simple and single-colour so it
+    tints and dims uniformly with the other chips (the colourful ic_wx_rain Meteocon would not). White fill;
+    tinted (and dimmed when unavailable) at the call site.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.5,10a4.5,4.5 0,0 0,-8.72 -1.55A4,4 0,0 0,6.5 16h11a3,3 0,0 0,0 -6z"/>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8,17.5a1,1 0,0 1,1 1v1.5a1,1 0,0 1,-2 0v-1.5a1,1 0,0 1,1 -1zM12,17.5a1,1 0,0 1,1 1v1.5a1,1 0,0 1,-2 0v-1.5a1,1 0,0 1,1 -1zM16,17.5a1,1 0,0 1,1 1v1.5a1,1 0,0 1,-2 0v-1.5a1,1 0,0 1,1 -1z"/>
+</vector>

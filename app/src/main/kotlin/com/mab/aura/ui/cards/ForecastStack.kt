@@ -94,6 +94,11 @@ fun AuraForecastStack(
                 AuraSunArcCard(snapshot = snapshot, size = size, now = now)
             }
             AuraWindCard(snapshot = snapshot, size = size)
+            // The observation-station card sits right after the wind rose, only when a station resolved
+            // (matching iOS's phone-only placement). observedStation carries the resolved station's name.
+            if (snapshot.observedStation != null) {
+                AuraStationCard(snapshot = snapshot, size = size)
+            }
             snapshot.airQuality?.let { AuraAirQualityCard(airQuality = it, size = size) }
             snapshot.uvIndex?.let { uv ->
                 AuraUVCard(

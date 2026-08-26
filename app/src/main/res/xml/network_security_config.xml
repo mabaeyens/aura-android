@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MITECO's air-quality host serves an incomplete TLS chain: it presents only the leaf certificate and omits
+  the issuing FNMT intermediate ("AC Componentes Informáticos"). curl and iOS complete the chain by fetching
+  that intermediate on the fly (the cert's AIA "CA Issuers" pointer), but Android's OkHttp does not do AIA
+  fetching, so the handshake fails and the air-quality card silently disappears (stations() returns empty).
+
+  The fix is to bundle that intermediate (res/raw/fnmt_accomp.pem, valid to 2028) and add it as a trust
+  anchor, scoped ONLY to the two miteco hosts. Because the leaf is signed directly by this intermediate,
+  trusting it lets the chain validate with no server change. "system" stays alongside it so ordinary
+  validation still applies; every other host (AEMET, Open-Meteo) is unaffected and keeps the default config.
+
+  One cert covers both hosts: the leaf's SAN lists ica.miteco.es and backend.ica.miteco.es.
+-->
+<network-security-config>
+    <domain-config>
+        <domain includeSubdomains="false">ica.miteco.es</domain>
+        <domain includeSubdomains="false">backend.ica.miteco.es</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/fnmt_accomp" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

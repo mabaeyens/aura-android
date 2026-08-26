@@ -25,11 +25,16 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.mab.aura"
+        // The Play app was registered as com.mab.Aura (capital A), and Play can never rename a package,
+        // so the applicationId (the install/store identity) must match that casing exactly. The `namespace`
+        // above stays lowercase com.mab.aura: it is the code package where R/BuildConfig and every class
+        // live, and AGP keeps the two independent, so nothing in src/ has to move. Relative manifest names
+        // like `.MainActivity` still resolve against the lowercase namespace.
+        applicationId = "com.mab.Aura"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.1.0"
     }
 
     signingConfigs {

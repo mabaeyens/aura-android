@@ -2,6 +2,17 @@
 
 Notable changes to aura-android, newest first.
 
+## [1.1.0] - 2026-08-26
+
+First public build, for Play internal testing. I jumped straight to 1.1.0 so the Android version lines up with the parallel iOS 1.1.0; there was no public 0.1.0 or 1.0.0 on Android, and there is no tip jar yet.
+
+- Full Hoy screen ported from iOS: an on-device natural-language headline, current conditions, the hourly strip, a seven-day forecast, the sunrise to sunset arc, wind on the Beaufort scale, air quality (MITECO ICA), the UV index (CAMS via Open-Meteo), the nearest radar, the official AEMET bulletin, and public-source weather news, all over a live sun-tracking sky.
+- Home-screen widget (Jetpack Glance) showing current conditions and the hourly strip.
+- Official AEMET warnings (CAP) matched to the municipality by province, and the real observed temperature from the nearest AEMET station.
+- Private by design: the AEMET key is stored encrypted on the device, there is no Aura server, and only the municipality, never the device's position, leaves the phone to fetch the public forecast.
+- Larger condition glyphs on the cards and the widget, to match the iOS sizing.
+- The hourly observation feed is gated on its own fint clock, so it only refetches when a new reading is actually due.
+
 ## [0.1.0] - 2026-08-24
 
 First scaffold. Not a release, just the project skeleton building end to end.

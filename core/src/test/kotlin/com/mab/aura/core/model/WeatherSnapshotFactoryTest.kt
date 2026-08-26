@@ -4,6 +4,7 @@ import com.mab.aura.core.wind.WindDirection
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -170,6 +171,59 @@ class WeatherSnapshotFactoryTest {
         // Hourly strip re-anchored to the current hour
         assertEquals(11, s.hours.first().hour)
         assertTrue(s.hours.all { it.hour >= 11 })
+    }
+
+    // --- observation carry-forward (ported from ObservationCarryForwardTests) ---
+    // When a refresh skips the hourly /observacion/convencional/todas fetch (the feed isn't due yet, or a
+    // transient error left `observed` null), make() must keep the last good station reading from the prior
+    // snapshot instead of blanking the observed card. A fresh reading, when present, always wins.
+
+    @Test
+    fun make_skippedObservationCarriesForwardPreviousReading() {
+        val observed = StationObservation(idema = "3195", ubi = "MADRID RETIRO",
+            lat = 40.41, lon = -3.68, ta = 21.4, hr = 50.0, fint = "2026-08-21T11:00:00+0000")
+        val previous = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = observed, zone = madrid, now = now)
+        assertEquals(21, previous.observedTemp)
+        assertNotNull(previous.observedReading)
+
+        // No fresh observation this cycle (fetch skipped), but a prior snapshot exists: reuse it wholesale.
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = previous, zone = madrid, now = now)
+
+        assertEquals(previous.observedTemp, rebuilt.observedTemp)
+        assertEquals(previous.observedStation, rebuilt.observedStation)
+        assertEquals(previous.observedStationDistanceKm, rebuilt.observedStationDistanceKm)
+        assertEquals(previous.observedMetrics, rebuilt.observedMetrics)
+        assertEquals(previous.observedReading, rebuilt.observedReading)
+    }
+
+    @Test
+    fun make_freshObservationWinsOverPrevious() {
+        val previous = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = StationObservation(idema = "3195", ubi = "MADRID RETIRO",
+                lat = 40.41, lon = -3.68, ta = 21.4, fint = "2026-08-21T11:00:00+0000"),
+            zone = madrid, now = now)
+        val fresh = StationObservation(idema = "3196", ubi = "GETAFE",
+            lat = 40.30, lon = -3.72, ta = 25.0, fint = "2026-08-21T12:00:00+0000")
+
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = fresh, previousObserved = previous, zone = madrid, now = now)
+
+        // The new station's reading is used wholesale — never a mix of a new temp with the old station name.
+        assertEquals(25, rebuilt.observedTemp)
+        assertEquals("Getafe", rebuilt.observedStation)
+        assertNotEquals(previous.observedStation, rebuilt.observedStation)
+    }
+
+    @Test
+    fun make_noObservationAndNoPreviousLeavesReadingNull() {
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = null, zone = madrid, now = now)
+        assertNull(rebuilt.observedTemp)
+        assertNull(rebuilt.observedStation)
+        assertNull(rebuilt.observedReading)
+        assertEquals(ObservedMetrics(), rebuilt.observedMetrics)
     }
 
     @Test

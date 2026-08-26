@@ -5,12 +5,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mab.aura.core.model.Location
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import java.time.Instant
 
 // One DataStore for the whole app, created once per process by this delegate (the recommended pattern). The
 // Glance widget, when it lands, shares the app process and reads this same instance — no App Group needed,
@@ -76,6 +78,25 @@ class Settings(context: Context) {
         store.edit { it[HERO_FAMILY] = value }
     }
 
+    /**
+     * The measurement time (`fint`) of the freshest record from the last successful national observation
+     * fetch (`/observacion/convencional/todas`). That product updates once per hour, so the refresh path
+     * uses this to hold the last-known feed until the next hourly reading is due instead of re-downloading it
+     * every cycle (see [com.mab.aura.data.observationDue]). Null until the first successful fetch (then it
+     * fetches anyway). This is the Android home for the Swift `SharedCache.lastObservationFint` App Group
+     * value, stored as epoch millis. A widget update never writes it — only a real refresh does.
+     */
+    val lastObservationFint: Flow<Instant?> = store.data.map { prefs ->
+        prefs[LAST_OBSERVATION_FINT]?.let { Instant.ofEpochMilli(it) }
+    }
+
+    suspend fun setLastObservationFint(value: Instant?) {
+        store.edit { prefs ->
+            if (value == null) prefs.remove(LAST_OBSERVATION_FINT)
+            else prefs[LAST_OBSERVATION_FINT] = value.toEpochMilli()
+        }
+    }
+
     private fun decodeFavourites(raw: String): List<Location> =
         runCatching { json.decodeFromString<List<Location>>(raw) }.getOrDefault(emptyList())
 
@@ -84,6 +105,7 @@ class Settings(context: Context) {
         val FAVOURITES = stringPreferencesKey("favourites_json")
         val USE_24H = booleanPreferencesKey("use_24h")
         val HERO_FAMILY = stringPreferencesKey("hero_family")
+        val LAST_OBSERVATION_FINT = longPreferencesKey("last_observation_fint")
 
         val json = Json { ignoreUnknownKeys = true }
     }

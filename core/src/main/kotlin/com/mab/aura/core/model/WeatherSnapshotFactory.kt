@@ -33,6 +33,7 @@ fun WeatherSnapshot.Companion.make(
     daily: MunicipioForecast,
     hourly: MunicipioHourly?,
     observed: StationObservation? = null,
+    previousObserved: WeatherSnapshot? = null,
     alert: WeatherAlert? = null,
     airQuality: AirQuality? = null,
     uvIndex: UVIndex? = null,
@@ -68,6 +69,29 @@ fun WeatherSnapshot.Companion.make(
         )
     }
 
+    // Observation carry-forward: when this refresh skipped the hourly observation fetch (the feed isn't due
+    // yet, or a transient error left [observed] null), keep the last good station reading from the prior
+    // snapshot rather than blanking the observed card. All-or-nothing per station, so a fresh reading's
+    // fields never mix with a stale one's. Ported from WeatherSnapshot.swift's `previousObserved` path.
+    val obsTemp: Int?
+    val obsStation: String?
+    val obsDistance: Double?
+    val obsMetrics: ObservedMetrics
+    val obsReading: ObservedReading?
+    if (observed != null) {
+        obsTemp = observed.temperature
+        obsStation = observed.stationName
+        obsDistance = observed.distanceKm(to = location)
+        obsMetrics = observed.availableMetrics
+        obsReading = observed.reading
+    } else {
+        obsTemp = previousObserved?.observedTemp
+        obsStation = previousObserved?.observedStation
+        obsDistance = previousObserved?.observedStationDistanceKm
+        obsMetrics = previousObserved?.observedMetrics ?: ObservedMetrics()
+        obsReading = previousObserved?.observedReading
+    }
+
     return WeatherSnapshot(
         ine = location.ine,
         localidad = location.nombre,
@@ -76,11 +100,11 @@ fun WeatherSnapshot.Companion.make(
         tempMax = today?.temperatura?.maxima,
         humedadMax = today?.humedadRelativa?.maxima,
         currentTemp = resolved?.current?.temp,
-        observedTemp = observed?.temperature,
-        observedStation = observed?.stationName,
-        observedStationDistanceKm = observed?.distanceKm(to = location),
-        observedMetrics = observed?.availableMetrics ?: ObservedMetrics(),
-        observedReading = observed?.reading,
+        observedTemp = obsTemp,
+        observedStation = obsStation,
+        observedStationDistanceKm = obsDistance,
+        observedMetrics = obsMetrics,
+        observedReading = obsReading,
         currentSky = resolved?.current?.sky,
         currentSkyText = resolved?.currentText,
         currentHumidity = humidityNow,

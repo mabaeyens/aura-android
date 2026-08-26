@@ -18,6 +18,7 @@ import com.mab.aura.core.net.MitecoAirQuality
 import com.mab.aura.core.net.OpenMeteoUV
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.store.SecretStore
+import com.mab.aura.store.Settings
 import com.mab.aura.store.SnapshotCache
 import androidx.glance.appwidget.updateAll
 import com.mab.aura.widget.AuraGlanceWidget
@@ -26,6 +27,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -52,6 +54,7 @@ class WeatherRepository(context: Context) {
     private val appContext = context.applicationContext
     private val secretStore = SecretStore(appContext)
     private val snapshotCache = SnapshotCache(appContext)
+    private val settings = Settings(appContext)
 
     // The MITECO air-quality and Open-Meteo UV fetchers are instances (they hold an HTTP client), unlike the
     // AEMET client which is rebuilt per refresh from the stored key. Their pure helpers (composite/nearest)
@@ -135,7 +138,23 @@ class WeatherRepository(context: Context) {
         // Every recent surface observation from AEMET's conventional network, one call for every location;
         // resolved per location to the nearest recent station below. A failure just leaves the station card
         // (and the observed temperature) hidden.
-        val observations = runCatching { client.observacionTodas() }.getOrElse { note(it); emptyList() }
+        //
+        // That national product updates once per hour, so gate the call on the stored measurement time
+        // ([observationDue]): a refresh triggered by any location crossing the 1-hour write-time gate must
+        // not re-download a reading that hasn't changed yet. When we skip, each location carries its last
+        // good station reading forward via [WeatherSnapshot.make]'s previousObserved, so the observed card
+        // holds rather than blanking. Persist the freshest record's time after a successful fetch. Scope is
+        // observations only; the forecast, UV and avisos keep their own cadence (a warning is never
+        // stale-cached). Ported from AEMETService.swift's observation clock.
+        val observations = if (observationDue(settings.lastObservationFint.first(), now, force)) {
+            runCatching { client.observacionTodas() }
+                .onSuccess { obs ->
+                    obs.mapNotNull { it.timestamp }.maxOrNull()?.let { settings.setLastObservationFint(it) }
+                }
+                .getOrElse { note(it); emptyList() }
+        } else {
+            emptyList()
+        }
 
         // Fetch each distinct avisos area at most once, then resolve per location by province.
         val areas = stale.mapNotNull { AvisoArea.forProvincia(it.provinciaCode) }.toSet()
@@ -171,6 +190,11 @@ class WeatherRepository(context: Context) {
             // null when none qualifies — then the station card and observed temperature stay hidden.
             val observed = observations.nearest(to = location)
 
+            // The still-cached snapshot, so a cycle that skipped the hourly observation fetch (see above)
+            // keeps this location's last good station reading instead of blanking the observed card. Only
+            // used as a fallback in make() when [observed] is null; a fresh reading always wins.
+            val previous = snapshotCache.snapshot(location.ine)
+
             val uvIndex = UVIndex.pick(location.ine, uvCities)
             // Hourly UV from CAMS via Open-Meteo — the per-hour granularity AEMET doesn't publish. Never
             // blocks; an empty result just hides the hourly curve.
@@ -188,6 +212,7 @@ class WeatherRepository(context: Context) {
                 daily = daily,
                 hourly = hourly,
                 observed = observed,
+                previousObserved = previous,
                 alert = alert,
                 airQuality = airQuality,
                 uvIndex = uvIndex,
@@ -219,4 +244,27 @@ class WeatherRepository(context: Context) {
     private companion object {
         const val ONE_HOUR_MILLIS = 3_600_000L
     }
+}
+
+/** AEMET's hourly observation cadence (60 min) plus a 30-min publish-lag margin. AEMET publishes each
+ *  reading 20-40 min after the hour, so a bare +60 would re-download the same `fint` and waste the call. */
+private const val OBSERVATION_TTL_MILLIS = 90 * 60 * 1000L
+
+/**
+ * Whether the national observation feed ([com.mab.aura.core.net.AemetClient.observacionTodas]) is due for a
+ * re-fetch. That product updates once per hour and each record carries its own measurement time; [anchor] is
+ * the freshest such time from the last successful fetch (persisted in [Settings.lastObservationFint]). Hold
+ * the last-known feed until `anchor + 90min` ([OBSERVATION_TTL_MILLIS]) — the hourly cadence plus a publish
+ * lag — and skip the call until then. A [force] refresh always fetches; a missing [anchor] fetches; a
+ * future-dated [anchor] is clamped to [now] so a bad timestamp can suppress the fetch for at most the margin
+ * window, never indefinitely. Pure so it is unit-tested directly.
+ *
+ * Ported from `AEMETService.swift`'s observation clock. iOS also always-fetches on a single-location manual
+ * refresh (`onlyINE`); Android has no manual/pull-to-refresh yet, so [force] is the only always-fetch
+ * trigger. The normal passive load passes one location with `force = false`, so it is gated like any other.
+ */
+internal fun observationDue(anchor: Instant?, now: Instant, force: Boolean): Boolean {
+    if (force || anchor == null) return true
+    val clamped = if (anchor.isAfter(now)) now else anchor
+    return !now.isBefore(clamped.plusMillis(OBSERVATION_TTL_MILLIS))
 }

@@ -48,8 +48,8 @@ sealed class AemetClientException(message: String) : Exception(message) {
  * [baseUrl] and [httpClient] are injectable instead (OkHttp's `MockWebServer` in tests). Swift's `async`
  * throwing methods become `suspend` functions that throw [AemetClientException].
  *
- * Still deferred: the plain-text `hoy` community-bulletin helpers (their normalized-text products aren't
- * ported yet). The [fetchText]/[fetchBinary] engine they build on is here, so they are a thin addition later.
+ * The plain-text community-bulletin helpers (`comunidadBulletin` and the `AemetBulletinParser`) live in the
+ * sibling `AemetBulletin.kt`, built on the [fetchText] engine here.
  */
 class AemetClient(
     private val apiKey: String,

@@ -2,7 +2,9 @@ package com.mab.aura.data
 
 import android.content.Context
 import com.mab.aura.core.air.AirQuality
+import com.mab.aura.core.geo.comunidad
 import com.mab.aura.core.model.AvisoArea
+import com.mab.aura.core.model.ForecastBulletin
 import com.mab.aura.core.model.Location
 import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
@@ -11,6 +13,7 @@ import com.mab.aura.core.model.nearest
 import com.mab.aura.core.model.topActive
 import com.mab.aura.core.net.AemetClient
 import com.mab.aura.core.net.AemetClientException
+import com.mab.aura.core.net.comunidadBulletin
 import com.mab.aura.core.net.MitecoAirQuality
 import com.mab.aura.core.net.OpenMeteoUV
 import com.mab.aura.core.uv.UVIndex
@@ -38,11 +41,11 @@ import java.time.Instant
  * has no bulk municipal-forecast endpoint, so each location is still its own call; the shared national feeds
  * (air quality, UV cities, avisos) are fetched once per refresh and sliced locally.
  *
- * One divergence from the Swift remains, because its `:core` support isn't ported yet: the community bulletin
- * (`comunidadBulletin`) is not fetched, so that snapshot field stays null. (The nearest-station observation
- * `observacionTodas` is now fetched — it feeds the observed temperature and the station card.) There is also
- * no Watch reload or notification step (no watch surface on Android). Everything else — the prune, the one-hour
- * staleness skip, the per-source composition into [WeatherSnapshot.make] — is faithful.
+ * The only remaining divergence from the Swift is the surfaces Android doesn't have: there is no Watch reload
+ * or notification step (no watch surface on Android). Everything else — the prune, the one-hour staleness skip,
+ * the community bulletin behind the "Predicción" card (`comunidadBulletin`, one fetch per autonomous community),
+ * the nearest-station observation (`observacionTodas`), the per-source composition into [WeatherSnapshot.make]
+ * — is faithful.
  */
 class WeatherRepository(context: Context) {
 
@@ -141,6 +144,17 @@ class WeatherRepository(context: Context) {
             alertsByArea[area] = runCatching { client.avisos(area) }.getOrElse { note(it); emptyList() }
         }
 
+        // The community narrative bulletin ("Predicción" card) is one text per autonomous community, so fetch
+        // each distinct community at most once and resolve per location below (many municipalities share one).
+        // A failure just leaves the bulletin card hidden; it never blocks the rest of the refresh.
+        val comunidades = stale.mapNotNull { it.comunidad }.toSet()
+        val bulletinByComunidad = HashMap<String, ForecastBulletin>()
+        for (comunidad in comunidades) {
+            runCatching { client.comunidadBulletin(comunidad, now) }
+                .onSuccess { bulletinByComunidad[comunidad.code] = it }
+                .onFailure { note(it) }
+        }
+
         for (location in stale) {
             val daily = runCatching { client.municipioDiaria(location.ine) }.getOrElse { note(it); continue }
             val hourly = runCatching { client.municipioHoraria(location.ine) }.getOrNull()
@@ -167,6 +181,8 @@ class WeatherRepository(context: Context) {
                 ?.let { alertsByArea[it] }
                 ?.topActive(location.provinciaCode)
 
+            val bulletin = location.comunidad?.let { bulletinByComunidad[it.code] }
+
             val snapshot = WeatherSnapshot.make(
                 location = location,
                 daily = daily,
@@ -176,6 +192,7 @@ class WeatherRepository(context: Context) {
                 airQuality = airQuality,
                 uvIndex = uvIndex,
                 uvHourly = uvHourly,
+                bulletin = bulletin,
             )
             snapshotCache.upsert(snapshot)
         }

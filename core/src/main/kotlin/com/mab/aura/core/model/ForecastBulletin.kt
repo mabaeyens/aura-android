@@ -7,10 +7,10 @@ import java.time.Instant
  * from the OpenData normalized-text products.
  *
  * Direct port of the `ForecastBulletin` struct in `AEMETBulletin.swift` — the model half only. The text
- * parser and the `comunidadBulletin`/`hoy`-vs-`manana` client logic from that Swift file are Layer C (the
- * net layer) and are not ported here; [WeatherSnapshot.make] only needs [texto] and [fenomenoSignificativo].
- * Swift's `Date` becomes [java.time.Instant]. Not persisted (Swift is `Sendable`, not `Codable`), so this is
- * a plain data class with no `@Serializable`.
+ * parser and the `comunidadBulletin`/`hoy`-vs-`manana` client logic from that Swift file are Layer C (the net
+ * layer) and live in `net/AemetBulletin.kt`; [WeatherSnapshot.make] only needs [texto] and
+ * [fenomenoSignificativo]. Swift's `Date` becomes [java.time.Instant]. Not persisted (Swift is `Sendable`,
+ * not `Codable`), so this is a plain data class with no `@Serializable`.
  */
 data class ForecastBulletin(
     /** When AEMET produced this bulletin (from the "DÍA … A LAS … HORA OFICIAL" header). */

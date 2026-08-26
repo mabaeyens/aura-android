@@ -52,8 +52,11 @@ fun AnimatedConditionGlyph(
     val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
 
     if (slot != null) {
+        // Same footprint box and the same GLYPH_FILL enlargement as the static ConditionGlyph, so the
+        // animated and the fallback glyph render at the same size (the Lottie shares the 128 canvas and
+        // ~75% fill of the static Meteocons).
         Box(modifier = modifier.size(slot * 1.5f), contentAlignment = Alignment.Center) {
-            LottieAnimation(composition = composition, progress = { progress }, modifier = Modifier.size(slot))
+            LottieAnimation(composition = composition, progress = { progress }, modifier = Modifier.size(slot * GLYPH_FILL))
         }
     } else {
         LottieAnimation(composition = composition, progress = { progress }, modifier = modifier)

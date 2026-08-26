@@ -30,8 +30,15 @@ import com.mab.aura.core.icon.WeatherIcon
  *
  * Android note on sizing: SwiftUI let the caller set the size with `.font(...)`. Here the caller sizes it
  * with the [modifier] (e.g. `Modifier.size(20.dp)`). The optional [slot] mirrors the Swift `GlyphSlot`: it
- * draws the glyph at [slot] inside a fixed `slot * 1.5` **square**, so a wide rain cloud and a narrow sun
- * keep the same footprint and don't knock a temperature row out of line in the hour strip.
+ * draws the glyph inside a fixed `slot * 1.5` **square**, so a wide rain cloud and a narrow sun keep the
+ * same footprint and don't knock a temperature row out of line in the hour strip.
+ *
+ * Android note on why the artwork is drawn at [slot] * [GLYPH_FILL], not at [slot]: iOS renders an SF Symbol
+ * at `.font(.system(size: slot))`, whose artwork fills nearly the whole em box, so its visible glyph is about
+ * `slot` tall. A Meteocons drawable instead fills only ~75% of its 128 canvas, so drawing it at `slot` would
+ * show visible artwork of only ~`slot * 0.75` and read noticeably smaller than iOS. Scaling the inner render
+ * up by ~1/0.75 brings the visible artwork back to ~`slot`, matching iOS. The `slot * 1.5` footprint box is
+ * unchanged, so this grows the glyph without touching any card's column widths or row alignment.
  */
 @Composable
 fun ConditionGlyph(
@@ -58,12 +65,18 @@ fun ConditionGlyph(
 
     if (slot != null) {
         Box(modifier = modifier.size(slot * 1.5f), contentAlignment = Alignment.Center) {
-            glyphAt(Modifier.size(slot))
+            glyphAt(Modifier.size(slot * GLYPH_FILL))
         }
     } else {
         glyphAt(modifier)
     }
 }
+
+/** How much larger than [slot] the Meteocons artwork is drawn, to reach iOS's SF Symbol size (see the file
+ *  KDoc). Meteocons fill ~75% of their canvas, so ~1/0.75 makes the visible glyph ~`slot` tall like iOS.
+ *  Stays below the `slot * 1.5` footprint box, so the enlarged glyph never overflows or clips. Shared by
+ *  [AnimatedConditionGlyph] so the static and animated glyphs render at the same size. */
+internal const val GLYPH_FILL = 1.33f
 
 /** The bundled Meteocons drawable for a [WeatherGlyph]. Each condition has its own file, including the
  *  day/night light-rain split and the three thunder variants (day / night / with-rain) that the earlier

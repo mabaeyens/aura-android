@@ -239,10 +239,13 @@ private fun ConditionBlock(snapshot: WeatherSnapshot, now: Instant, medium: Bool
             // No colorFilter: the Meteocons drawables are full-colour (yellow sun, blue rain), so tinting
             // would flatten them to a white silhouette. RemoteViews can't animate, so the widget shows the
             // static Meteocons while the in-app strip plays the matching Lottie.
+            // Sized larger than the nominal glyph for the same reason the in-app cards are (Meteocons fill
+            // only ~75% of their canvas, so a literal size reads small); bumped a step to match iOS's denser
+            // symbol. Still shorter than the temperature line beside it, so the row height is unchanged.
             Image(
                 provider = ImageProvider(drawableFor(glyph)),
                 contentDescription = null,
-                modifier = GlanceModifier.size(if (medium) 28.dp else 30.dp),
+                modifier = GlanceModifier.size(if (medium) 44.dp else 46.dp),
             )
             Spacer(GlanceModifier.width(6.dp))
             Text(
@@ -316,10 +319,12 @@ private fun HourColumn(slot: HourSlot, modifier: GlanceModifier) {
             maxLines = 1,
         )
         Spacer(GlanceModifier.height(3.dp))
+        // Bumped from the nominal size to match the in-app strip: the Meteocons' own ~25% padding otherwise
+        // makes a literal size read small. Still fits the weighted four-column strip on a medium/2x2 tile.
         Image(
             provider = ImageProvider(drawableFor(glyph)),
             contentDescription = null,
-            modifier = GlanceModifier.size(22.dp),
+            modifier = GlanceModifier.size(32.dp),
         )
         Spacer(GlanceModifier.height(3.dp))
         Text(

@@ -42,6 +42,8 @@ Phone only. No Wear OS and no tablet layout, by design. The Home Screen widget (
 
 ## Attribution
 
-Weather data from AEMET OpenData, with air quality from MITECO and the UV curve from Copernicus (CAMS, via Open-Meteo) where shown. Weather icons are [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, used under the MIT licence.
+Aura reads from open-data repositories with public access: weather from [AEMET OpenData](https://opendata.aemet.es), air quality from [MITECO](https://www.miteco.gob.es) (ICA), and the UV curve from [Copernicus (CAMS)](https://atmosphere.copernicus.eu) via Open-Meteo where shown. Weather icons are [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, used under the MIT licence.
+
+Aura is an independent app. It is not affiliated with, and does not represent, AEMET, MITECO, or any government entity.
 
 Built with the help of Claude Code.

@@ -14,6 +14,15 @@ import com.mab.aura.ui.theme.Palette
 import java.time.Instant
 
 /**
+ * How much of the wide art's sky to trim off the **top** before the widget shows it. The art is 4:3 (a tall
+ * frame with a lot of sky); the Glance tile is short and wide, so Glance centre-crops it to the middle band.
+ * Left alone that middle band is mostly sky. Dropping this fraction from the top first shifts the centre-crop
+ * downward, so the tile reads more of the scene (skyline, hills) and less empty sky. Tune to taste; 0.2 keeps
+ * the lower 80% of the art.
+ */
+private const val SKY_CUT = 0.2f
+
+/**
  * The widget's background: the real **wide** hero scene for this sky and time of day, or null to fall back to
  * the procedural [skyGradientBitmap].
  *
@@ -21,6 +30,9 @@ import java.time.Instant
  * art if it shipped, else the conditionless day/night base, else null. Unlike the phone, the Glance widget
  * can't draw the live sun/moon over the art (RemoteViews has no Canvas), so the scene stands on its own — the
  * time of day and condition are what the baked art already carries; the moving sun is the one phone-only touch.
+ *
+ * The loaded art has its top [SKY_CUT] of sky trimmed so the widget favours the scene over empty sky (see the
+ * constant's note). Glance has no crop-alignment knob, so this is done here on the bitmap, not in the layout.
  */
 internal fun wideHeroBitmap(
     context: Context,
@@ -32,7 +44,19 @@ internal fun wideHeroBitmap(
     val name = HeroBackground.wideName(snapshot, now, family) { it in available }
         ?: HeroBackground.wideBaseName(snapshot, now, family)?.takeIf { it in available }
         ?: return null
-    return HeroImages.loadWide(context, name)
+    val full = HeroImages.loadWide(context, name) ?: return null
+    return cropTopSky(full)
+}
+
+/**
+ * Return the art with its top [SKY_CUT] removed, keeping the lower band. [Bitmap.createBitmap] with a
+ * sub-region hands back a new bitmap for that rectangle, so the original is left untouched. A zero or
+ * out-of-range cut just returns the source unchanged (defensive; SKY_CUT is a small constant today).
+ */
+private fun cropTopSky(src: Bitmap): Bitmap {
+    val cut = (src.height * SKY_CUT).toInt()
+    if (cut <= 0 || cut >= src.height) return src
+    return Bitmap.createBitmap(src, 0, cut, src.width, src.height - cut)
 }
 
 /**

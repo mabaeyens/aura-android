@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The languages Aura ships UI for. Declaring them here turns on the OS per-app language picker
+  (Settings > Apps > Aura > Language) on Android 13+, and lets the system offer English to an
+  English device. Spanish is the default (res/values), English is res/values-en; any other
+  device language falls back to Spanish. The order sets how they list in the system picker.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="es" />
+    <locale android:name="en" />
+</locale-config>

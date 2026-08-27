@@ -17,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mab.aura.R
 import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.text.ForecastPhrase
@@ -56,12 +58,12 @@ fun AuraHeroCard(
     // The Spanish time-of-day word after the city ("MADRID · Atardecer"), from the same sun-path bucket the
     // hero background selector uses, so the label tracks true sunrise/sunset.
     val momentLabel = when (HeroBackground.Time.from(now, snapshot.sunrise, snapshot.sunset, zone)) {
-        HeroBackground.Time.DAWN -> "Amanecer"
-        HeroBackground.Time.MORNING -> "Mañana"
-        HeroBackground.Time.NOON -> "Mediodía"
-        HeroBackground.Time.AFTERNOON -> "Tarde"
-        HeroBackground.Time.DUSK -> "Atardecer"
-        HeroBackground.Time.NIGHT -> "Noche"
+        HeroBackground.Time.DAWN -> stringResource(R.string.card_hero_moment_dawn)
+        HeroBackground.Time.MORNING -> stringResource(R.string.card_hero_moment_morning)
+        HeroBackground.Time.NOON -> stringResource(R.string.card_hero_moment_noon)
+        HeroBackground.Time.AFTERNOON -> stringResource(R.string.card_hero_moment_afternoon)
+        HeroBackground.Time.DUSK -> stringResource(R.string.card_hero_moment_dusk)
+        HeroBackground.Time.NIGHT -> stringResource(R.string.card_hero_moment_night)
     }
 
     Column(

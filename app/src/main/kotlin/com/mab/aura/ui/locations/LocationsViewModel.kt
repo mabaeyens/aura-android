@@ -3,6 +3,7 @@ package com.mab.aura.ui.locations
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mab.aura.R
 import com.mab.aura.core.geo.SpainCities
 import com.mab.aura.core.model.Location
 import com.mab.aura.location.LocationProvider
@@ -95,11 +96,11 @@ class LocationsViewModel(app: Application) : AndroidViewModel(app) {
                 is LocationResult.Available ->
                     add(SpainCities.nearest(result.coordinate.latitude, result.coordinate.longitude))
                 LocationResult.PermissionDenied ->
-                    _notice.value = "Permiso de ubicación denegado. Actívalo en los Ajustes del sistema."
+                    _notice.value = getApplication<Application>().getString(R.string.loc_notice_permission_denied)
                 LocationResult.ServicesOff ->
-                    _notice.value = "La ubicación está desactivada. Actívala para usar tu posición."
+                    _notice.value = getApplication<Application>().getString(R.string.loc_notice_services_off)
                 LocationResult.NoFix ->
-                    _notice.value = "No se pudo determinar tu ubicación. Inténtalo de nuevo."
+                    _notice.value = getApplication<Application>().getString(R.string.loc_notice_no_fix)
             }
             _resolving.value = false
         }

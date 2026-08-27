@@ -3,6 +3,7 @@ package com.mab.aura.ui.hoy
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mab.aura.R
 import com.mab.aura.core.geo.SpainCities
 import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.model.Location
@@ -97,7 +98,7 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
                 // reason we fell back to a default location (if we did) for the screen to surface separately.
                 fresh != null -> HoyUiState.Content(fresh, notice = error, locationFallback = resolved.fallback)
                 // Nothing cached and the refresh failed: a full error state with a retry.
-                else -> HoyUiState.Error(error ?: "No se pudo obtener la información.")
+                else -> HoyUiState.Error(error ?: getApplication<Application>().getString(R.string.hoy_error_generic))
             }
 
             // Radar and news are fetched lazily, after the forecast is on screen and off other hosts (news is

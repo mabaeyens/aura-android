@@ -3,6 +3,7 @@ package com.mab.aura.ui.about
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,8 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.ui.ConditionGlyph
 
 /**
@@ -69,10 +72,10 @@ fun AcercaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Acerca de") },
+                title = { Text(stringResource(R.string.about_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -100,9 +103,9 @@ fun AcercaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 ConditionGlyph(sky = "11", isNight = false, modifier = Modifier.size(56.dp))
             }
 
-            Text("Aura", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.about_app_name), style = MaterialTheme.typography.titleLarge)
             Text(
-                text = "Versión $version",
+                text = stringResource(R.string.about_version, version),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -112,46 +115,38 @@ fun AcercaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
             // The "what Aura is" blurb, ported verbatim from AboutView. Written as me, first person where it
             // speaks ("Aura es..."), centred like the iOS screen.
-            CenteredBody(
-                "Aura es una app del tiempo para Android. Toma tu ubicación más cercana y te muestra la " +
-                    "previsión de AEMET a todo color: en la propia app y en el widget de la pantalla de inicio. " +
-                    "Se actualiza sola a medida que cambian los datos.\n\n" +
-                    "Del latín aura: brisa, aire en movimiento, y también el halo de luz que rodea algo.\n\n" +
-                    "Los datos son de fuentes públicas oficiales. Todo ocurre en tu dispositivo: sin cuenta y " +
-                    "sin servidores propios; solo se conecta a esas fuentes para traer los datos.",
-            )
+            CenteredBody(stringResource(R.string.about_blurb))
 
             Spacer(Modifier.height(28.dp))
 
-            SmallHeader("Dedicatoria")
+            SmallHeader(stringResource(R.string.about_dedication_header))
             // A personal dedication, in my own words. Not an attribution: kept apart from the credits below.
-            for (line in dedicationLines) {
-                CenteredBody(line, modifier = Modifier.padding(bottom = 8.dp))
-            }
+            CenteredBody(stringResource(R.string.about_dedication_father), modifier = Modifier.padding(bottom = 8.dp))
+            CenteredBody(stringResource(R.string.about_dedication_mother), modifier = Modifier.padding(bottom = 8.dp))
 
             Spacer(Modifier.height(28.dp))
 
-            SmallHeader("Créditos")
+            SmallHeader(stringResource(R.string.about_credits_header))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.widthIn(max = 360.dp),
             ) {
                 for (c in credits) {
-                    CreditRow(name = c.name, provides = c.provides, onClick = { open(c.url) })
+                    CreditRow(name = c.name, provides = stringResource(c.provides), onClick = { open(c.url) })
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "Código en GitHub",
+                text = stringResource(R.string.about_github),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { open("https://github.com/mabaeyens/aura-android") },
             )
             Text(
-                text = "Sin cuenta · sin servidores · solo fuentes públicas",
+                text = stringResource(R.string.about_tagline),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
@@ -162,27 +157,22 @@ fun AcercaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** The dedication lines, kept in one list so I can add names later without touching the layout. Verbatim from the iOS AboutView, my own words. */
-private val dedicationLines = listOf(
-    "A mi padre, que me enseñó a mirar al cielo y a las estrellas, y me introdujo en el fabuloso mundo de la tecnología que tanto disfruto hoy.",
-    "A mi madre, que me descubrió otros mundos que no se podían ver con los ojos, a través de los libros y en los que encuentro gran dicha.",
-)
+private data class Credit(val name: String, @StringRes val provides: Int, val url: String)
 
-private data class Credit(val name: String, val provides: String, val url: String)
-
-/** The source list, same order and wording as the iOS AboutView Créditos block. */
+/** The source list, same order and wording as the iOS AboutView Créditos block. The `provides` note is a
+ *  string resource so it can be localised; the source names and URLs are not translated. */
 private val credits = listOf(
-    Credit("AEMET", "Previsión, avisos, radar y UV máximo (OpenData)", "https://opendata.aemet.es"),
+    Credit("AEMET", R.string.about_credit_aemet, "https://opendata.aemet.es"),
     Credit(
         "MITECO",
-        "Índice de calidad del aire (ICA · CC-BY 4.0)",
+        R.string.about_credit_miteco,
         "https://www.miteco.gob.es/es/calidad-y-evaluacion-ambiental/temas/atmosfera-y-calidad-del-aire/visualizacion-datos-calidad-del-aire/ica.html",
     ),
-    Credit("Copernicus (CAMS)", "Índice UV por hora, vía Open-Meteo (CC-BY 4.0)", "https://atmosphere.copernicus.eu"),
-    Credit("RTVE", "El Tiempo, el parte diario", "https://www.rtve.es"),
-    Credit("Meteored", "Noticias y divulgación (tiempo.com)", "https://www.tiempo.com"),
-    Credit("AEMET Blog", "Divulgación de sus meteorólogos", "https://aemetblog.es"),
-    Credit("Meteocons", "Iconos del tiempo, de Bas Milius (licencia MIT)", "https://github.com/basmilius/weather-icons"),
+    Credit("Copernicus (CAMS)", R.string.about_credit_copernicus, "https://atmosphere.copernicus.eu"),
+    Credit("RTVE", R.string.about_credit_rtve, "https://www.rtve.es"),
+    Credit("Meteored", R.string.about_credit_meteored, "https://www.tiempo.com"),
+    Credit("AEMET Blog", R.string.about_credit_aemetblog, "https://aemetblog.es"),
+    Credit("Meteocons", R.string.about_credit_meteocons, "https://github.com/basmilius/weather-icons"),
 )
 
 /** A small, quiet section label, matching the footnote-weight headers on the iOS screen. */

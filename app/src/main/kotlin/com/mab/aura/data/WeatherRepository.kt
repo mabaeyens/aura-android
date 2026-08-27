@@ -1,6 +1,7 @@
 package com.mab.aura.data
 
 import android.content.Context
+import com.mab.aura.R
 import com.mab.aura.core.air.AirQuality
 import com.mab.aura.core.geo.comunidad
 import com.mab.aura.core.model.AvisoArea
@@ -239,13 +240,14 @@ class WeatherRepository(context: Context) {
 
     /** Spanish message for any error surfaced while talking to AEMET. Direct port of `AEMETService.message`. */
     private fun messageFor(error: Throwable): String = when (error) {
-        is AemetClientException.MissingApiKey -> "Falta la clave de AEMET. Añádela en Ajustes."
-        is AemetClientException.RateLimited -> "AEMET ha limitado las peticiones. Inténtalo en un minuto."
-        is AemetClientException.Http -> "Error de red (HTTP ${error.code})."
-        is AemetClientException.AemetStatus -> "AEMET devolvió ${error.estado}: ${error.descripcion}"
-        is AemetClientException.Decoding -> "No se pudieron leer los datos de AEMET."
-        is IOException -> "Sin conexión. Se muestran los últimos datos disponibles."
-        else -> "No se pudo obtener la información."
+        is AemetClientException.MissingApiKey -> appContext.getString(R.string.repo_error_missing_key)
+        is AemetClientException.RateLimited -> appContext.getString(R.string.repo_error_rate_limited)
+        is AemetClientException.Http -> appContext.getString(R.string.repo_error_http, error.code)
+        is AemetClientException.AemetStatus ->
+            appContext.getString(R.string.repo_error_aemet_status, error.estado, error.descripcion)
+        is AemetClientException.Decoding -> appContext.getString(R.string.repo_error_decoding)
+        is IOException -> appContext.getString(R.string.repo_error_offline)
+        else -> appContext.getString(R.string.repo_error_generic)
     }
 
     private companion object {

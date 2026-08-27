@@ -31,10 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.R
 import com.mab.aura.core.model.Location
 import com.mab.aura.data.Municipios
 import kotlinx.coroutines.Dispatchers
@@ -82,10 +84,10 @@ fun AddLocationScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Añadir ubicación") },
+                title = { Text(stringResource(R.string.loc_add_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cancelar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_cancel))
                     }
                 },
             )
@@ -99,13 +101,13 @@ fun AddLocationScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Buscar municipio") },
+                label = { Text(stringResource(R.string.loc_search_label)) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Borrar búsqueda")
+                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.loc_clear_search))
                         }
                     }
                 },

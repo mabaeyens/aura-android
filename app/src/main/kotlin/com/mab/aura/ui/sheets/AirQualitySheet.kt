@@ -7,9 +7,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import com.mab.aura.R
 import com.mab.aura.core.air.AirComponent
 import com.mab.aura.core.air.AirQuality
 import com.mab.aura.core.scale.AirICA
@@ -25,16 +29,12 @@ import java.time.Instant
 @Composable
 internal fun AuraAirQualitySheet(airQuality: AirQuality, now: Instant, onClose: () -> Unit) {
     AuraScaleSheet(
-        title = "Índice de calidad del aire",
-        subtitle = subtitle(airQuality),
-        footnote = "Índice ICA del Ministerio (MITECO): el peor de los contaminantes marca el nivel. Aura " +
-            "toma cada contaminante de la estación más cercana que lo mide (el O₃ y el SO₂ rara vez están " +
-            "en la más próxima) y usa las medias con las que se elabora el ICA: 8 h para el O₃, 24 h para " +
-            "las partículas. Por eso cada uno puede venir de una estación y una hora distintas, indicadas " +
-            "abajo.",
+        title = stringResource(R.string.sheet_aqi_title),
+        subtitle = subtitle(airQuality, LocalContext.current),
+        footnote = stringResource(R.string.sheet_aqi_footnote),
         barColors = (1..6).map { Palette.airQuality(it) },
         markerFraction = (airQuality.category.toDouble() - 0.5) / 6,
-        markerLabel = "Nivel ${airQuality.category}",
+        markerLabel = stringResource(R.string.sheet_aqi_marker, airQuality.category),
         onClose = onClose,
     ) {
         AirICA.levels.forEach { level ->
@@ -64,14 +64,14 @@ private fun ComponentSection(airQuality: AirQuality, now: Instant) {
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = "POR CONTAMINANTE",
+                text = stringResource(R.string.sheet_aqi_by_pollutant_header),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.1.sp,
                 color = Color.White.copy(alpha = 0.72f),
             )
             Text(
-                text = "Cada uno, de la estación más cercana que lo mide.",
+                text = stringResource(R.string.sheet_aqi_by_pollutant_note),
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.5f),
             )
@@ -87,7 +87,13 @@ private fun ComponentSection(airQuality: AirQuality, now: Instant) {
     }
 }
 
-private fun subtitle(airQuality: AirQuality): String {
-    val by = airQuality.pollutantLabel?.let { ", por $it" } ?: ""
-    return "Ahora: ${airQuality.categoryName.lowercase()} (nivel ${airQuality.category})$by, en ${airQuality.station}."
+private fun subtitle(airQuality: AirQuality, context: Context): String {
+    val by = airQuality.pollutantLabel?.let { context.getString(R.string.sheet_aqi_subtitle_by, it) } ?: ""
+    return context.getString(
+        R.string.sheet_aqi_subtitle,
+        airQuality.categoryName.lowercase(),
+        airQuality.category,
+        by,
+        airQuality.station,
+    )
 }

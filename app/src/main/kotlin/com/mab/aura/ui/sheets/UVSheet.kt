@@ -1,6 +1,8 @@
 package com.mab.aura.ui.sheets
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.mab.aura.R
 import com.mab.aura.core.scale.UVBands
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.ui.theme.Palette
@@ -17,14 +19,13 @@ import kotlin.math.min
 @Composable
 internal fun AuraUVSheet(uvIndex: UVIndex, cloudy: Boolean, onClose: () -> Unit) {
     AuraScaleSheet(
-        title = "Índice ultravioleta",
-        subtitle = "Máximo de hoy: ${uvIndex.value} — ${uvIndex.bandName.lowercase()}.",
-        footnote = "Índice UV de la OMS: la radiación solar máxima prevista para hoy con cielo despejado. " +
-            "Cuanto más alto, antes se quema la piel. Las nubes lo bajan; la nieve, el agua y la altitud lo suben.",
+        title = stringResource(R.string.sheet_uv_title),
+        subtitle = stringResource(R.string.sheet_uv_subtitle, uvIndex.value, uvIndex.bandName.lowercase()),
+        footnote = stringResource(R.string.sheet_uv_footnote),
         barColors = UVBands.bands.map { Palette.uvIndex(it.mid) },
         markerFraction = min(uvIndex.value.toDouble(), 11.0) / 11,
-        markerLabel = "UV ${uvIndex.value}",
-        note = if (cloudy) "Ahora el cielo está nublado y baja el UV por debajo de este máximo." else null,
+        markerLabel = stringResource(R.string.sheet_uv_marker, uvIndex.value),
+        note = if (cloudy) stringResource(R.string.sheet_uv_cloud_note) else null,
         onClose = onClose,
     ) {
         UVBands.bands.forEach { band ->
@@ -34,7 +35,7 @@ internal fun AuraUVSheet(uvIndex: UVIndex, cloudy: Boolean, onClose: () -> Unit)
                 name = band.name,
                 detail = band.advice,
                 isCurrent = band.contains(uvIndex.value),
-                currentLabel = "Máx. hoy",
+                currentLabel = stringResource(R.string.sheet_uv_max_today),
             )
         }
     }

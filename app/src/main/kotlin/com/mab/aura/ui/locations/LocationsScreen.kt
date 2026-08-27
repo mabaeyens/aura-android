@@ -35,10 +35,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.R
 import com.mab.aura.core.model.Location
 
 /**
@@ -83,15 +85,15 @@ fun LocationsScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Ubicaciones") },
+                title = { Text(stringResource(R.string.loc_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onAddLocation) {
-                        Icon(Icons.Filled.Add, contentDescription = "Añadir ubicación")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.loc_add_title))
                     }
                 },
             )
@@ -120,7 +122,7 @@ fun LocationsScreen(
             if (favourites.isEmpty()) {
                 item {
                     Text(
-                        text = "No has guardado ninguna ubicación. Usa el botón + para añadir una ciudad, o tu ubicación actual.",
+                        text = stringResource(R.string.loc_empty_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
@@ -153,7 +155,7 @@ private fun UseMyLocationRow(resolving: Boolean, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Icon(Icons.Filled.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Text("Usar mi ubicación", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.loc_use_my_location), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (resolving) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
     }
 }
@@ -187,7 +189,7 @@ private fun FavouriteRow(
             if (isActive) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Ubicación activa",
+                    contentDescription = stringResource(R.string.loc_active_content_desc),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -195,7 +197,7 @@ private fun FavouriteRow(
         IconButton(onClick = onRemove) {
             Icon(
                 Icons.Filled.Delete,
-                contentDescription = "Eliminar ${location.nombre}",
+                contentDescription = stringResource(R.string.loc_remove_content_desc, location.nombre),
                 tint = MaterialTheme.colorScheme.error,
             )
         }

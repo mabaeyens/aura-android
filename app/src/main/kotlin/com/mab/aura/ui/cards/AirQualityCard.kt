@@ -16,12 +16,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import android.content.Context
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.air.AirComponent
 import com.mab.aura.core.air.AirQuality
 import com.mab.aura.ui.sheets.AuraAirQualitySheet
@@ -50,8 +54,9 @@ fun AuraAirQualityCard(
 ) {
     val color = Palette.airQuality(airQuality.category)
     val showComponents = airQuality.components.isNotEmpty()
+    val context = LocalContext.current
 
-    AuraSection("Calidad del aire".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_aqi_title).uppercase(), size, modifier = modifier) {
         AuraDetailCard(size, sheet = { onClose -> AuraAirQualitySheet(airQuality, Instant.now(), onClose) }) {
             Column(verticalArrangement = Arrangement.spacedBy(if (showComponents) 12.dp else 0.dp)) {
                 Row(
@@ -86,7 +91,7 @@ fun AuraAirQualityCard(
                             maxLines = 2,
                         )
                         Text(
-                            text = detail(airQuality),
+                            text = detail(airQuality, context),
                             fontSize = size.smallSize - 1,
                             color = Color.White.copy(alpha = 0.65f),
                             maxLines = 1,
@@ -121,7 +126,7 @@ private fun ComponentsRow(airQuality: AirQuality, size: AuraSize) {
             }
         }
         Text(
-            text = "µg/m³",
+            text = stringResource(R.string.card_aqi_unit),
             fontSize = size.smallSize - 2,
             color = Color.White.copy(alpha = 0.4f),
             modifier = Modifier.fillMaxWidth(),
@@ -186,18 +191,17 @@ private fun RowScope.ComponentChip(
  * comma under 10 km, whole km beyond). A partial index (computed from fewer pollutants) gets a trailing
  * "· parcial". Ported from the Swift `detail`.
  */
-private fun detail(airQuality: AirQuality): String {
+private fun detail(airQuality: AirQuality, context: Context): String {
     val parts = mutableListOf<String>()
-    airQuality.pollutantLabel?.let { parts.add("por $it") }
+    airQuality.pollutantLabel?.let { parts.add(context.getString(R.string.card_aqi_pollutant, it)) }
     parts.add(airQuality.station)
     val km = airQuality.distanceKm
-    parts.add(
-        if (km < 10) {
-            "a " + String.format(Locale.US, "%.1f", km).replace('.', ',') + " km"
-        } else {
-            "a ${km.roundToInt()} km"
-        },
-    )
-    if (airQuality.partial) parts.add("parcial")
+    val distance = if (km < 10) {
+        String.format(Locale.US, "%.1f", km).replace('.', ',')
+    } else {
+        "${km.roundToInt()}"
+    }
+    parts.add(context.getString(R.string.card_aqi_distance_km, distance))
+    if (airQuality.partial) parts.add(context.getString(R.string.card_aqi_partial))
     return parts.joinToString(" · ")
 }

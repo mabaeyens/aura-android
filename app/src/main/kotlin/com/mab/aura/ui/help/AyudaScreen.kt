@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mab.aura.R
@@ -78,10 +79,10 @@ fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Ayuda") },
+                title = { Text(stringResource(R.string.help_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -115,21 +116,18 @@ fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun ApiKeySection(onRequestKey: () -> Unit) {
     Section(
-        header = "Tu clave de AEMET",
-        footer = "Si la previsión deja de actualizarse, pide otra clave del mismo modo y vuelve a pegarla.",
+        header = stringResource(R.string.help_apikey_header),
+        footer = stringResource(R.string.help_apikey_footer),
     ) {
-        Body(
-            "Aura muestra la previsión de AEMET, que es pública y gratuita. Para usarla necesitas tu propia " +
-                "clave, también gratis y personal.",
-        )
+        Body(stringResource(R.string.help_apikey_body))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 2.dp)) {
-            Step(1, "Abre la página de AEMET (botón de abajo).")
-            Step(2, "Escribe tu correo y acepta las condiciones.")
-            Step(3, "AEMET te envía la clave por correo (mira también en spam).")
-            Step(4, "Pégala en Ajustes → Clave API.")
+            Step(1, stringResource(R.string.help_apikey_step1))
+            Step(2, stringResource(R.string.help_apikey_step2))
+            Step(3, stringResource(R.string.help_apikey_step3))
+            Step(4, stringResource(R.string.help_apikey_step4))
         }
         FilledTonalButton(onClick = onRequestKey) {
-            Text("Solicitar mi clave en AEMET")
+            Text(stringResource(R.string.help_apikey_button))
         }
     }
 }
@@ -137,126 +135,123 @@ private fun ApiKeySection(onRequestKey: () -> Unit) {
 @Composable
 private fun SkySection() {
     Section(
-        header = "Condiciones del cielo",
-        footer = "De noche, el sol de estos iconos se convierte en luna.",
+        header = stringResource(R.string.help_sky_header),
+        footer = stringResource(R.string.help_sky_footer),
     ) {
-        ConditionRow("11", night = false, "Despejado")
-        ConditionRow("11", night = true, "Despejado de noche")
-        ConditionRow("12", night = false, "Poco nuboso o con intervalos")
-        ConditionRow("14", night = false, "Nuboso o cubierto")
-        ConditionRow("16", night = false, "Niebla o bruma")
-        ConditionRow("23", night = false, "Lluvia con claros / chubascos")
-        ConditionRow("24", night = false, "Lluvia")
-        ConditionRow("25", night = false, "Lluvia fuerte")
-        ConditionRow("33", night = false, "Nieve")
-        ConditionRow("71", night = false, "Nieve escasa (aguanieve)")
-        ConditionRow("51", night = false, "Tormenta")
-        ConditionRow("53", night = false, "Tormenta con lluvia")
+        ConditionRow("11", night = false, stringResource(R.string.help_sky_clear))
+        ConditionRow("11", night = true, stringResource(R.string.help_sky_clear_night))
+        ConditionRow("12", night = false, stringResource(R.string.help_sky_partly))
+        ConditionRow("14", night = false, stringResource(R.string.help_sky_cloudy))
+        ConditionRow("16", night = false, stringResource(R.string.help_sky_fog))
+        ConditionRow("23", night = false, stringResource(R.string.help_sky_showers))
+        ConditionRow("24", night = false, stringResource(R.string.help_sky_rain))
+        ConditionRow("25", night = false, stringResource(R.string.help_sky_heavy_rain))
+        ConditionRow("33", night = false, stringResource(R.string.help_sky_snow))
+        ConditionRow("71", night = false, stringResource(R.string.help_sky_sleet))
+        ConditionRow("51", night = false, stringResource(R.string.help_sky_storm))
+        ConditionRow("53", night = false, stringResource(R.string.help_sky_storm_rain))
     }
 }
 
 @Composable
 private fun TemperatureSection() {
     Section(
-        header = "Temperatura",
-        footer = "Los grados se colorean en una escala continua de azul (frío) a rojo (calor): la misma en las tarjetas, las barras de rango y el widget.",
+        header = stringResource(R.string.help_temp_header),
+        footer = stringResource(R.string.help_temp_footer),
     ) {
-        TintRow(R.drawable.ic_arrow_up, "Temperatura máxima", "La más alta prevista para el día.")
-        TintRow(R.drawable.ic_arrow_down, "Temperatura mínima", "La más baja prevista para el día.")
+        TintRow(R.drawable.ic_arrow_up, stringResource(R.string.help_temp_max_title), stringResource(R.string.help_temp_max_meaning))
+        TintRow(R.drawable.ic_arrow_down, stringResource(R.string.help_temp_min_title), stringResource(R.string.help_temp_min_meaning))
     }
 }
 
 @Composable
 private fun RainHumiditySection() {
     Section(
-        header = "Lluvia y humedad",
-        footer = "El paraguas (lluvia) y la gota con ondas (humedad) son cosas distintas a propósito.",
+        header = stringResource(R.string.help_rain_header),
+        footer = stringResource(R.string.help_rain_footer),
     ) {
-        GlyphRow(R.drawable.ic_wx_umbrella, "Probabilidad de lluvia", "El porcentaje de que llueva. Es la lluvia.")
-        GlyphRow(R.drawable.ic_wx_humidity, "Humedad relativa", "El agua que hay en el aire, en %. No es la lluvia.")
+        GlyphRow(R.drawable.ic_wx_umbrella, stringResource(R.string.help_rain_prob_title), stringResource(R.string.help_rain_prob_meaning))
+        GlyphRow(R.drawable.ic_wx_humidity, stringResource(R.string.help_rain_humidity_title), stringResource(R.string.help_rain_humidity_meaning))
     }
 }
 
 @Composable
 private fun WindSection() {
     Section(
-        header = "Viento",
-        footer = "Toca la tarjeta del viento para ver la escala Beaufort completa.",
+        header = stringResource(R.string.help_wind_header),
+        footer = stringResource(R.string.help_wind_footer),
     ) {
-        GlyphRow(R.drawable.ic_wx_wind, "Velocidad del viento", "La velocidad en km/h, la unidad que da AEMET.")
+        GlyphRow(R.drawable.ic_wx_wind, stringResource(R.string.help_wind_speed_title), stringResource(R.string.help_wind_speed_meaning))
         // The wind rose is a custom compass mark on the card, not a Meteocons glyph; the tinted arrow stands in
         // for it here, teal like the card's pointer, as iOS uses a teal north arrow in this same row.
-        TintRow(R.drawable.ic_arrow_up, "Rosa de los vientos", "La flecha señala la dirección del viento; su color, la intensidad.", tint = Palette.tempTeal)
+        TintRow(R.drawable.ic_arrow_up, stringResource(R.string.help_wind_rose_title), stringResource(R.string.help_wind_rose_meaning), tint = Palette.tempTeal)
     }
 }
 
 @Composable
 private fun SunMoonSection() {
-    Section(header = "Sol y luna") {
-        GlyphRow(R.drawable.ic_wx_sunrise, "Amanecer", "La salida (orto) del sol.")
-        GlyphRow(R.drawable.ic_wx_sunset, "Atardecer", "La puesta (ocaso) del sol.")
-        ConditionRow("11", night = true, "De noche, el sol de los iconos se convierte en luna.")
+    Section(header = stringResource(R.string.help_sun_header)) {
+        GlyphRow(R.drawable.ic_wx_sunrise, stringResource(R.string.help_sun_sunrise_title), stringResource(R.string.help_sun_sunrise_meaning))
+        GlyphRow(R.drawable.ic_wx_sunset, stringResource(R.string.help_sun_sunset_title), stringResource(R.string.help_sun_sunset_meaning))
+        ConditionRow("11", night = true, stringResource(R.string.help_sun_night))
     }
 }
 
 @Composable
 private fun UVSection() {
     Section(
-        header = "Índice UV",
-        footer = "Es el máximo previsto del día con el cielo despejado. Toca la tarjeta para ver la escala completa.",
+        header = stringResource(R.string.help_uv_header),
+        footer = stringResource(R.string.help_uv_footer),
     ) {
-        GlyphRow(R.drawable.ic_wx_uv_2, "UV bajo (0–2)", "Sin protección necesaria.")
-        GlyphRow(R.drawable.ic_wx_uv_4, "UV moderado (3–5)", "Gafas de sol y crema.")
-        GlyphRow(R.drawable.ic_wx_uv_7, "UV alto (6–7)", "Protección recomendada.")
-        GlyphRow(R.drawable.ic_wx_uv_9, "UV muy alto (8–10)", "Evita el sol del mediodía.")
-        GlyphRow(R.drawable.ic_wx_uv_11, "UV extremadamente alto (11+)", "Evita la exposición al sol.")
-        GlyphRow(R.drawable.ic_wx_cloudy, "UV atenuado por nubes", "El cielo nublado puede bajar el UV de ahora por debajo del máximo.")
+        GlyphRow(R.drawable.ic_wx_uv_2, stringResource(R.string.help_uv_low_title), stringResource(R.string.help_uv_low_meaning))
+        GlyphRow(R.drawable.ic_wx_uv_4, stringResource(R.string.help_uv_moderate_title), stringResource(R.string.help_uv_moderate_meaning))
+        GlyphRow(R.drawable.ic_wx_uv_7, stringResource(R.string.help_uv_high_title), stringResource(R.string.help_uv_high_meaning))
+        GlyphRow(R.drawable.ic_wx_uv_9, stringResource(R.string.help_uv_veryhigh_title), stringResource(R.string.help_uv_veryhigh_meaning))
+        GlyphRow(R.drawable.ic_wx_uv_11, stringResource(R.string.help_uv_extreme_title), stringResource(R.string.help_uv_extreme_meaning))
+        GlyphRow(R.drawable.ic_wx_cloudy, stringResource(R.string.help_uv_clouds_title), stringResource(R.string.help_uv_clouds_meaning))
     }
 }
 
 @Composable
 private fun AirSection() {
     Section(
-        header = "Calidad del aire",
-        footer = "Toca la tarjeta para ver la escala completa y cada contaminante por separado.",
+        header = stringResource(R.string.help_air_header),
+        footer = stringResource(R.string.help_air_footer),
     ) {
         // The card shows the ICA level as a coloured swatch, not an icon; the legend uses the same swatch. A
         // mid "Regular" band (3) is representative of the six-colour scale.
-        SwatchRow(Palette.airQuality(3), "Calidad del aire (ICA)", "El Índice de Calidad del Aire de MITECO, del 1 (buena) al 6 (extremadamente desfavorable).")
+        SwatchRow(Palette.airQuality(3), stringResource(R.string.help_air_title), stringResource(R.string.help_air_meaning))
     }
 }
 
 @Composable
 private fun AvisoSection() {
-    Section(header = "Avisos") {
-        IconRow(Icons.Filled.Warning, "Aviso meteorológico", "AEMET tiene un aviso activo para la zona. El color indica el nivel: amarillo, naranja o rojo, de menor a mayor peligro.")
+    Section(header = stringResource(R.string.help_aviso_header)) {
+        IconRow(Icons.Filled.Warning, stringResource(R.string.help_aviso_title), stringResource(R.string.help_aviso_meaning))
     }
 }
 
 @Composable
 private fun AppSection() {
-    Section(header = "En la app") {
-        IconRow(Icons.Filled.Settings, "Menú", "El engranaje de arriba abre las secciones de la app.")
-        IconRow(Icons.Filled.Place, "Ubicaciones", "Tus lugares guardados.")
-        IconRow(Icons.Filled.Info, "Acerca de", "Versión, fuentes y créditos.")
-        IconRow(Icons.Filled.Search, "Buscar", "Encuentra un municipio para añadirlo.")
-        IconRow(Icons.Filled.Add, "Añadir", "Guarda una ubicación nueva.")
-        IconRow(Icons.Filled.Check, "Elegida", "La ubicación que se está mostrando.")
-        IconRow(Icons.Filled.KeyboardArrowDown, "Desplegar", "Desliza o toca para ver más detalle.")
-        IconRow(Icons.Filled.Close, "Cerrar", "Cierra la ficha o la escala abierta.")
+    Section(header = stringResource(R.string.help_app_header)) {
+        IconRow(Icons.Filled.Settings, stringResource(R.string.help_app_menu_title), stringResource(R.string.help_app_menu_meaning))
+        IconRow(Icons.Filled.Place, stringResource(R.string.help_app_locations_title), stringResource(R.string.help_app_locations_meaning))
+        IconRow(Icons.Filled.Info, stringResource(R.string.help_app_about_title), stringResource(R.string.help_app_about_meaning))
+        IconRow(Icons.Filled.Search, stringResource(R.string.help_app_search_title), stringResource(R.string.help_app_search_meaning))
+        IconRow(Icons.Filled.Add, stringResource(R.string.help_app_add_title), stringResource(R.string.help_app_add_meaning))
+        IconRow(Icons.Filled.Check, stringResource(R.string.help_app_chosen_title), stringResource(R.string.help_app_chosen_meaning))
+        IconRow(Icons.Filled.KeyboardArrowDown, stringResource(R.string.help_app_expand_title), stringResource(R.string.help_app_expand_meaning))
+        IconRow(Icons.Filled.Close, stringResource(R.string.action_close), stringResource(R.string.help_app_close_meaning))
     }
 }
 
 @Composable
 private fun ScalesSection() {
     Section(
-        header = "Escalas de color",
-        footer = "La temperatura usa la misma escala azul→rojo en toda la app: tarjetas, barras y widget.",
+        header = stringResource(R.string.help_scales_header),
+        footer = stringResource(R.string.help_scales_footer),
     ) {
-        Body(
-            "Muchas tarjetas se pueden tocar para abrir su escala de color, con tu valor actual señalado: " +
-                "Viento (Beaufort), Calidad del aire (ICA) y UV.",
-        )
+        Body(stringResource(R.string.help_scales_body))
     }
 }
 

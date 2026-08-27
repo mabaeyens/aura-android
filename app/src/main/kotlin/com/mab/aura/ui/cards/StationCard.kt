@@ -1,6 +1,8 @@
 package com.mab.aura.ui.cards
 
+import android.content.Context
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,12 +51,13 @@ fun AuraStationCard(
 ) {
     val available = snapshot.observedMetrics
     val reading = snapshot.observedReading
+    val context = LocalContext.current
 
-    AuraSection("Estación de observación".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_station_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = header(snapshot),
+                    text = header(snapshot, context),
                     fontSize = size.bodySize - 1,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
@@ -70,7 +75,7 @@ fun AuraStationCard(
                     }
                 }
                 Text(
-                    text = completeness(available),
+                    text = completeness(available, context),
                     fontSize = size.smallSize - 1,
                     color = Color.White.copy(alpha = 0.6f),
                     maxLines = 2,
@@ -84,18 +89,18 @@ fun AuraStationCard(
 private class Metric(
     val flag: Int,
     @DrawableRes val icon: Int,
-    val label: String,
-    val full: String,
+    @StringRes val label: Int,
+    @StringRes val full: Int,
 )
 
 // The canonical metric order, matching the iOS card. Labels are pre-abbreviated to a common width ("Humed.",
 // "Pres.") so every chip's label renders at the same size.
 private val METRICS = listOf(
-    Metric(ObservedMetrics.TEMPERATURE, R.drawable.ic_metric_temp, "Temp.", "temperatura"),
-    Metric(ObservedMetrics.WIND, R.drawable.ic_metric_wind, "Viento", "viento"),
-    Metric(ObservedMetrics.HUMIDITY, R.drawable.ic_metric_humidity, "Humed.", "humedad"),
-    Metric(ObservedMetrics.PRESSURE, R.drawable.ic_metric_pressure, "Pres.", "presión"),
-    Metric(ObservedMetrics.PRECIPITATION, R.drawable.ic_metric_rain, "Lluvia", "precipitación"),
+    Metric(ObservedMetrics.TEMPERATURE, R.drawable.ic_metric_temp, R.string.card_station_metric_temperature_label, R.string.card_station_metric_temperature_full),
+    Metric(ObservedMetrics.WIND, R.drawable.ic_metric_wind, R.string.card_station_metric_wind_label, R.string.card_station_metric_wind_full),
+    Metric(ObservedMetrics.HUMIDITY, R.drawable.ic_metric_humidity, R.string.card_station_metric_humidity_label, R.string.card_station_metric_humidity_full),
+    Metric(ObservedMetrics.PRESSURE, R.drawable.ic_metric_pressure, R.string.card_station_metric_pressure_label, R.string.card_station_metric_pressure_full),
+    Metric(ObservedMetrics.PRECIPITATION, R.drawable.ic_metric_rain, R.string.card_station_metric_precipitation_label, R.string.card_station_metric_precipitation_full),
 )
 
 /**
@@ -127,7 +132,7 @@ private fun RowScope.MetricChip(metric: Metric, value: String?, on: Boolean, siz
             maxLines = 1,
         )
         Text(
-            text = metric.label,
+            text = stringResource(metric.label),
             fontSize = size.smallSize - 3,
             fontWeight = FontWeight.Medium,
             color = Color.White.copy(alpha = if (on) 0.7f else 0.35f),
@@ -155,7 +160,7 @@ private fun value(flag: Int, reading: ObservedReading?): String? {
 }
 
 /** "Madrid Retiro · a 3 km" — the station and its distance (Spanish decimal comma under 10 km, whole km beyond). */
-private fun header(snapshot: WeatherSnapshot): String {
+private fun header(snapshot: WeatherSnapshot, context: Context): String {
     val name = snapshot.observedStation ?: "—"
     val km = snapshot.observedStationDistanceKm ?: return name
     val dist = if (km < 10) {
@@ -163,17 +168,21 @@ private fun header(snapshot: WeatherSnapshot): String {
     } else {
         "${km.roundToInt()}"
     }
-    return "$name · a $dist km"
+    return context.getString(R.string.card_station_header, name, dist)
 }
 
 /** "Mide todos los datos de superficie." or "No mide: presión y precipitación." */
-private fun completeness(available: ObservedMetrics): String {
-    val missing = METRICS.filter { !available.contains(it.flag) }.map { it.full }
-    if (missing.isEmpty()) return "Mide todos los datos de superficie."
+private fun completeness(available: ObservedMetrics, context: Context): String {
+    val missing = METRICS.filter { !available.contains(it.flag) }.map { context.getString(it.full) }
+    if (missing.isEmpty()) return context.getString(R.string.card_station_complete)
     val list = if (missing.size > 1) {
-        missing.dropLast(1).joinToString(", ") + " y " + missing.last()
+        context.getString(
+            R.string.card_station_list_conjunction,
+            missing.dropLast(1).joinToString(", "),
+            missing.last(),
+        )
     } else {
         missing[0]
     }
-    return "No mide: $list."
+    return context.getString(R.string.card_station_missing, list)
 }

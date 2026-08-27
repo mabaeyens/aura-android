@@ -32,11 +32,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import com.mab.aura.R
 import com.mab.aura.core.air.AirComponent
 import com.mab.aura.core.air.AirQuality
 import com.mab.aura.ui.cards.relative
@@ -136,7 +140,7 @@ internal fun SheetScaffold(
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)) {
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = "Cerrar",
+                contentDescription = stringResource(R.string.action_close),
                 tint = Color.White.copy(alpha = 0.85f),
                 modifier = Modifier.size(27.dp),
             )
@@ -256,7 +260,7 @@ internal fun AuraScaleRow(
     name: String,
     detail: String,
     isCurrent: Boolean,
-    currentLabel: String = "Ahora",
+    currentLabel: String = stringResource(R.string.sheet_scale_now),
 ) {
     val shape = RoundedCornerShape(16.dp)
     Row(
@@ -328,6 +332,7 @@ internal fun CurrentPill(text: String) {
 @Composable
 internal fun AirComponentScale(token: String, component: AirComponent?, isDriver: Boolean, now: Instant) {
     val measured = component != null
+    val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -339,7 +344,7 @@ internal fun AirComponentScale(token: String, component: AirComponent?, isDriver
                 fontWeight = FontWeight.Bold,
                 color = Color.White.copy(alpha = if (measured) 1f else 0.4f),
             )
-            if (isDriver && measured) CurrentPill("dominante")
+            if (isDriver && measured) CurrentPill(stringResource(R.string.sheet_scale_dominant))
             Spacer(modifier = Modifier.weight(1f))
             if (component != null) {
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -348,7 +353,7 @@ internal fun AirComponentScale(token: String, component: AirComponent?, isDriver
                 }
             } else {
                 Text(
-                    text = "No medido en esta estación",
+                    text = stringResource(R.string.sheet_scale_not_measured),
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.42f),
                 )
@@ -365,7 +370,7 @@ internal fun AirComponentScale(token: String, component: AirComponent?, isDriver
                     fontWeight = FontWeight.SemiBold,
                     color = Palette.airQuality(component.icaCategory),
                 )
-                componentSource(component, now)?.let { source ->
+                componentSource(component, now, context)?.let { source ->
                     Text("·", color = Color.White.copy(alpha = 0.3f))
                     Text(source, fontSize = 13.sp, color = Color.White.copy(alpha = 0.5f), maxLines = 1)
                 }
@@ -415,17 +420,14 @@ private fun ComponentRamp(component: AirComponent?) {
  * "Retiro · a 1,7 km · hace 1 h" — the station this pollutant came from, its distance, and how fresh the
  * reading is. Different pollutants can show different stations and times; that is the point.
  */
-private fun componentSource(c: AirComponent, now: Instant): String? {
+private fun componentSource(c: AirComponent, now: Instant, context: Context): String? {
     val station = c.station ?: return null
     val parts = mutableListOf(station)
     c.distanceKm?.let { km ->
-        parts += if (km < 10) {
-            // Force a dot from the format (locale-independent), then swap to the Spanish decimal comma,
-            // matching the Swift `String(format:).replacingOccurrences`.
-            "a " + String.format(Locale.US, "%.1f", km).replace(".", ",") + " km"
-        } else {
-            "a ${Math.round(km)} km"
-        }
+        // Format the distance in the device's locale so the decimal separator matches (comma in Spanish,
+        // dot in English); the wrapper phrase itself is a string resource.
+        val kmText = if (km < 10) String.format(Locale.getDefault(), "%.1f", km) else Math.round(km).toString()
+        parts += context.getString(R.string.sheet_scale_distance, kmText)
     }
     c.measured?.let { parts += relative(it, now) }
     return parts.joinToString(" · ")

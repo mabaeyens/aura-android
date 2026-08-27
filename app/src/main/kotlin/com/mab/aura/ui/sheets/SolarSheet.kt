@@ -19,10 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
 import com.mab.aura.R
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.solar.SolarTimes
@@ -52,37 +55,36 @@ internal fun AuraSolarSheet(snapshot: WeatherSnapshot, now: Instant, onClose: ()
     ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Sol", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                Text(stringResource(R.string.sheet_solar_title), fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White,
                     modifier = Modifier.padding(end = 34.dp))
-                Text(subtitle(snapshot, now, dayLength), fontSize = 15.sp, color = Color.White.copy(alpha = 0.72f))
+                Text(subtitle(snapshot, now, dayLength, LocalContext.current), fontSize = 15.sp, color = Color.White.copy(alpha = 0.72f))
             }
 
             SunSignature()
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                FactRow("Primera luz", timeText(solar?.civilDawn)) {
+                FactRow(stringResource(R.string.sheet_solar_first_light), timeText(solar?.civilDawn)) {
                     GlyphMark(R.drawable.ic_wx_sunrise)
                 }
-                FactRow("Orto", timeText(sunrise)) {
+                FactRow(stringResource(R.string.sheet_solar_sunrise), timeText(sunrise)) {
                     GlyphMark(R.drawable.ic_wx_sunrise)
                 }
-                FactRow("Mediodía solar", timeText(noon)) {
+                FactRow(stringResource(R.string.sheet_solar_noon), timeText(noon)) {
                     GlyphMark(R.drawable.ic_wx_clear_day)
                 }
-                FactRow("Ocaso", timeText(sunset)) {
+                FactRow(stringResource(R.string.sheet_solar_sunset), timeText(sunset)) {
                     GlyphMark(R.drawable.ic_wx_sunset)
                 }
-                FactRow("Última luz", timeText(solar?.civilDusk)) {
+                FactRow(stringResource(R.string.sheet_solar_last_light), timeText(solar?.civilDusk)) {
                     GlyphMark(R.drawable.ic_wx_sunset)
                 }
-                FactRow("Luz del día", dayLength?.let { durationText(it.seconds) } ?: "—", last = true) {
+                FactRow(stringResource(R.string.sheet_solar_daylight), dayLength?.let { durationText(it.seconds) } ?: "—", last = true) {
                     DotMark(Color.White.copy(alpha = 0.85f))
                 }
             }
 
             Text(
-                text = "Orto y ocaso vienen del parte de AEMET para tu municipio; la primera y la última luz " +
-                    "(crepúsculo civil), el mediodía solar y la duración del día se calculan para tus coordenadas.",
+                text = stringResource(R.string.sheet_solar_footnote),
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.55f),
                 modifier = Modifier.padding(top = 2.dp),
@@ -148,14 +150,14 @@ private fun dayLength(sunrise: Instant?, sunset: Instant?): Duration? {
 }
 
 /** The headline fact: today's daylight length plus the day-over-day delta. */
-private fun subtitle(snapshot: WeatherSnapshot, now: Instant, dayLength: Duration?): String {
-    val len = dayLength ?: return "Horario solar no disponible"
-    var s = "${durationText(len.seconds)} de luz"
+private fun subtitle(snapshot: WeatherSnapshot, now: Instant, dayLength: Duration?, context: Context): String {
+    val len = dayLength ?: return context.getString(R.string.sheet_solar_unavailable)
+    var s = context.getString(R.string.sheet_solar_daylight_length, durationText(len.seconds))
     dayLengthDeltaMinutes(snapshot, now, len)?.let { dm ->
-        s += when {
-            dm > 0 -> " · $dm min más que ayer"
-            dm < 0 -> " · ${-dm} min menos que ayer"
-            else -> " · igual que ayer"
+        s += " · " + when {
+            dm > 0 -> context.getString(R.string.sheet_solar_delta_more, dm)
+            dm < 0 -> context.getString(R.string.sheet_solar_delta_less, -dm)
+            else -> context.getString(R.string.sheet_solar_delta_same)
         }
     }
     return s

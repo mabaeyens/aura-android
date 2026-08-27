@@ -54,12 +54,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.R
 import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.cards.AuraForecastStack
@@ -129,16 +132,15 @@ fun HoyScreen(
 
             HoyUiState.NeedsApiKey -> CenteredMessage {
                 Message(
-                    title = "Añade tu clave de AEMET",
-                    body = "Aura necesita una clave de la API de AEMET para mostrar el tiempo. Ábrela con el " +
-                        "engranaje de arriba a la derecha y pégala en Ajustes.",
+                    title = stringResource(R.string.hoy_needs_key_title),
+                    body = stringResource(R.string.hoy_needs_key_body),
                 )
             }
 
             is HoyUiState.Content -> {
                 // One banner slot, so a data problem (offline, rate-limited) takes priority over the softer
                 // "showing a default location" note; the latter shows only when the fetch itself was fine.
-                val effectiveNotice = s.notice ?: locationFallbackText(s.locationFallback, permissionAsked)
+                val effectiveNotice = s.notice ?: locationFallbackText(context, s.locationFallback, permissionAsked)
                 HoyContent(snapshot = s.snapshot, notice = effectiveNotice, now = now, radar = s.radar, news = s.news)
             }
 
@@ -147,8 +149,8 @@ fun HoyScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Message(title = "No se pudo cargar", body = s.message)
-                    Button(onClick = { viewModel.load() }) { Text("Reintentar") }
+                    Message(title = stringResource(R.string.hoy_error_title), body = s.message)
+                    Button(onClick = { viewModel.load() }) { Text(stringResource(R.string.action_retry)) }
                 }
             }
         }
@@ -164,14 +166,14 @@ fun HoyScreen(
         ) {
             var menuOpen by remember { mutableStateOf(false) }
             IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Filled.Settings, contentDescription = "Menú", tint = Color.White)
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.hoy_menu_content_desc), tint = Color.White)
             }
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
             ) {
                 DropdownMenuItem(
-                    text = { Text("Ubicaciones") },
+                    text = { Text(stringResource(R.string.hoy_menu_locations)) },
                     leadingIcon = { Icon(Icons.Filled.Place, contentDescription = null) },
                     onClick = {
                         menuOpen = false
@@ -179,7 +181,7 @@ fun HoyScreen(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Ajustes") },
+                    text = { Text(stringResource(R.string.hoy_menu_settings)) },
                     leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                     onClick = {
                         menuOpen = false
@@ -187,7 +189,7 @@ fun HoyScreen(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Ayuda") },
+                    text = { Text(stringResource(R.string.hoy_menu_help)) },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     onClick = {
                         menuOpen = false
@@ -195,7 +197,7 @@ fun HoyScreen(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Acerca de") },
+                    text = { Text(stringResource(R.string.hoy_menu_about)) },
                     leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                     onClick = {
                         menuOpen = false
@@ -212,13 +214,13 @@ fun HoyScreen(
  * screen has actually asked ([permissionAsked]): before the prompt appears, saying "no permission" would be
  * premature. Services-off and no-fix are surfaced straight away, since the permission prompt can't fix either.
  */
-private fun locationFallbackText(fallback: LocationFallback?, permissionAsked: Boolean): String? =
+private fun locationFallbackText(context: Context, fallback: LocationFallback?, permissionAsked: Boolean): String? =
     when (fallback) {
         null -> null
         LocationFallback.PermissionDenied ->
-            if (permissionAsked) "Sin permiso de ubicación. Mostrando Madrid." else null
-        LocationFallback.ServicesOff -> "La ubicación está desactivada. Mostrando Madrid."
-        LocationFallback.NoFix -> "No se pudo determinar tu ubicación. Mostrando Madrid."
+            if (permissionAsked) context.getString(R.string.hoy_location_permission_denied) else null
+        LocationFallback.ServicesOff -> context.getString(R.string.hoy_location_services_off)
+        LocationFallback.NoFix -> context.getString(R.string.hoy_location_no_fix)
     }
 
 /** The weather itself: the card stack in a vertical scroll over the sky, as the app lays it out. */
@@ -321,7 +323,7 @@ private fun ScrollHint(visible: Boolean, modifier: Modifier = Modifier) {
         )
         Icon(
             imageVector = Icons.Filled.KeyboardArrowDown,
-            contentDescription = "Desliza para ver la previsión",
+            contentDescription = stringResource(R.string.hoy_scroll_hint),
             tint = Color.White,
             modifier = Modifier.size(34.dp),
         )

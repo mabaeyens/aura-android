@@ -1,6 +1,10 @@
 package com.mab.aura.ui.sheets
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import android.content.Context
+import com.mab.aura.R
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.scale.Beaufort
 import com.mab.aura.ui.theme.Palette
@@ -14,13 +18,12 @@ import com.mab.aura.ui.theme.Palette
 internal fun AuraBeaufortSheet(snapshot: WeatherSnapshot, onClose: () -> Unit) {
     val current = Beaufort.force(snapshot.windSpeed)
     AuraScaleSheet(
-        title = "Escala de Beaufort",
-        subtitle = subtitle(snapshot),
-        footnote = "La fuerza se estima a partir de la velocidad media del viento; las rachas pueden ser " +
-            "bastante mayores. Nombres de la escala según AEMET.",
+        title = stringResource(R.string.sheet_beaufort_title),
+        subtitle = subtitle(snapshot, LocalContext.current),
+        footnote = stringResource(R.string.sheet_beaufort_footnote),
         barColors = Beaufort.scale.map { Palette.wind(it.midKmh) },
         markerFraction = if (current >= 0) current.toDouble() / 12 else null,
-        markerLabel = "${snapshot.windSpeed ?: 0} km/h",
+        markerLabel = stringResource(R.string.sheet_beaufort_marker, snapshot.windSpeed ?: 0),
         onClose = onClose,
     ) {
         Beaufort.scale.forEach { step ->
@@ -35,10 +38,10 @@ internal fun AuraBeaufortSheet(snapshot: WeatherSnapshot, onClose: () -> Unit) {
     }
 }
 
-private fun subtitle(snapshot: WeatherSnapshot): String {
-    val v = snapshot.windSpeed ?: return "Ahora mismo no hay dato de viento."
+private fun subtitle(snapshot: WeatherSnapshot, context: Context): String {
+    val v = snapshot.windSpeed ?: return context.getString(R.string.sheet_beaufort_no_wind)
     val f = Beaufort.force(v)
     val name = Beaufort.scale.firstOrNull { it.force == f }?.name?.lowercase() ?: ""
-    val dir = snapshot.windDirection?.let { " del ${it.spanishName.lowercase()}" } ?: ""
-    return "Ahora: $v km/h$dir — fuerza $f, $name."
+    val dir = snapshot.windDirection?.let { " " + context.getString(R.string.sheet_beaufort_direction, it.spanishName.lowercase()) } ?: ""
+    return context.getString(R.string.sheet_beaufort_subtitle, v, dir, f, name)
 }

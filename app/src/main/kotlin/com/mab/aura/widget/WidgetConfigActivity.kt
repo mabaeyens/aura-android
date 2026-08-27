@@ -33,6 +33,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
@@ -40,6 +41,7 @@ import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
+import com.mab.aura.R
 import com.mab.aura.core.model.Location
 import com.mab.aura.store.Settings
 import com.mab.aura.ui.theme.AuraTheme
@@ -127,10 +129,10 @@ private fun WidgetConfigScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ubicación del widget") },
+                title = { Text(stringResource(R.string.widget_config_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -153,8 +155,8 @@ private fun WidgetConfigScreen(
             // The default: follow whatever the app is showing. Clears any pin.
             item {
                 OptionRow(
-                    title = "Ubicación de la app",
-                    subtitle = "Sigue la ubicación activa de Aura",
+                    title = stringResource(R.string.widget_config_app_location_title),
+                    subtitle = stringResource(R.string.widget_config_app_location_subtitle),
                     selected = loaded.pinnedINE == null,
                     onClick = { onSelect(null) },
                 )
@@ -164,7 +166,7 @@ private fun WidgetConfigScreen(
             if (loaded.favourites.isEmpty()) {
                 item {
                     Text(
-                        text = "Guarda ubicaciones en la app para poder fijar una aquí.",
+                        text = stringResource(R.string.widget_config_empty_favourites),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
@@ -213,7 +215,7 @@ private fun OptionRow(
             if (selected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Seleccionada",
+                    contentDescription = stringResource(R.string.widget_config_selected),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }

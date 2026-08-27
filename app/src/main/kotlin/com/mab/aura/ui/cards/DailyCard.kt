@@ -19,10 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.DaySnapshot
 import com.mab.aura.ui.AnimatedConditionGlyph
 import com.mab.aura.ui.theme.Palette
@@ -52,7 +54,7 @@ fun AuraDailyCard(
     val weekLo = days.mapNotNull { it.min }.minOrNull() ?: 0
     val weekHi = days.mapNotNull { it.max }.maxOrNull() ?: 1
 
-    AuraSection("Próximos días".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_daily_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {
             Column(verticalArrangement = Arrangement.spacedBy(size.rowGap)) {
                 days.forEach { d ->
@@ -168,10 +170,10 @@ private fun fmt(v: Int?): String = v?.let { "$it°" } ?: "—"
 // Tabular figures so the temperature columns line up digit-for-digit, matching the Swift `.monospacedDigit`.
 private val tabularDigits = TextStyle(fontFeatureSettings = "tnum")
 
-// Abbreviated weekday in es-ES, capitalised, e.g. "Mié". Uses the system zone to match Swift's
-// `Calendar.current`; the trailing period Java's CLDR adds is dropped for the compact card look.
+// Abbreviated weekday in the device language, capitalised, e.g. "Mié" / "Wed". Uses the system zone to match
+// Swift's `Calendar.current`; the trailing period Java's CLDR adds is dropped for the compact card look.
 private val weekdayFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE", Locale("es", "ES")).withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("EEE", Locale.getDefault()).withZone(ZoneId.systemDefault())
 
 private fun weekday(date: java.time.Instant): String =
     weekdayFormatter.format(date).removeSuffix(".").replaceFirstChar { it.uppercase() }

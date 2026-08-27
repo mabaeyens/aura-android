@@ -13,9 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.HourSlot
 import com.mab.aura.ui.AnimatedConditionGlyph
 import com.mab.aura.ui.theme.Palette
@@ -52,7 +54,7 @@ fun AuraHourlyCard(
     // dry strip doesn't reserve a band of empty space at the card's bottom.
     val showPrecip = hours.any { (it.precipProb ?: 0) > 0 }
 
-    AuraSection("Próximas horas".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_hourly_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {
             if (scrolls) {
                 // The card's inner width is the viewport; a fifth of it is one column, so five fit and the
@@ -94,7 +96,7 @@ private fun HourColumn(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = hourLabel(h.hour),
+            text = stringResource(R.string.card_hourly_hour, h.hour),
             fontSize = size.smallSize,
             fontWeight = FontWeight.Medium,
             color = Color.White.copy(alpha = 0.75f),
@@ -135,10 +137,3 @@ private fun HourColumn(
         }
     }
 }
-
-/**
- * The hour label, e.g. "18h". The 12/24h preference lives in the settings store (Layer D) once it lands and
- * `AuraTime` is ported; until then this follows the Spanish 24h default `AuraTime.hourLabel` uses, matching
- * the same interim choice the alert card's validity formatter makes.
- */
-private fun hourLabel(hour: Int): String = "${hour}h"

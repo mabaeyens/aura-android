@@ -285,6 +285,7 @@ private fun HighLow(snapshot: WeatherSnapshot) {
  *  and colour follow the app's own alert palette ([Palette.alert]). */
 @Composable
 private fun AvisoPill(level: WeatherAlert.Level) {
+    val context = LocalContext.current
     Row(
         modifier = GlanceModifier
             .background(ColorProvider(Palette.alert(level)))
@@ -299,7 +300,7 @@ private fun AvisoPill(level: WeatherAlert.Level) {
         )
         Spacer(GlanceModifier.width(3.dp))
         Text(
-            text = "Aviso",
+            text = context.getString(R.string.widget_content_aviso),
             style = TextStyle(color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold),
             maxLines = 1,
         )
@@ -337,17 +338,18 @@ private fun HourColumn(slot: HourSlot, modifier: GlanceModifier) {
 
 @Composable
 private fun EmptyContent() {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier.fillMaxSize().padding(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Aura",
+            text = context.getString(R.string.widget_content_empty_title),
             style = TextStyle(color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold),
         )
         Text(
-            text = "Abre la app para ver el tiempo",
+            text = context.getString(R.string.widget_content_empty_message),
             style = TextStyle(color = WhiteFaint, fontSize = 12.sp, textAlign = TextAlign.Center),
         )
     }

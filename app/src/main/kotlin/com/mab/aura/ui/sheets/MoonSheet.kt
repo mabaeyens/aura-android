@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +30,7 @@ import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.PhasedMoonDisc
 import com.mab.aura.ui.cards.hhmm
 import com.mab.aura.ui.theme.Palette
+import android.content.Context
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,6 +57,7 @@ internal fun AuraMoonSheet(snapshot: WeatherSnapshot, now: Instant, onClose: () 
 
     val illumPct = (position.illumination * 100).roundToInt()
     val phase = MoonPhaseMath.phaseName(position.illumination, position.waxing)
+    val context = LocalContext.current
 
     SheetScaffold(
         gradient = listOf(Color(0.09f, 0.12f, 0.19f), Color(0.03f, 0.04f, 0.08f)),
@@ -61,36 +65,34 @@ internal fun AuraMoonSheet(snapshot: WeatherSnapshot, now: Instant, onClose: () 
     ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Luna", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                Text(stringResource(R.string.sheet_moon_title), fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White,
                     modifier = Modifier.padding(end = 34.dp))
-                Text("$phase · $illumPct % iluminada", fontSize = 15.sp, color = Color.White.copy(alpha = 0.72f))
+                Text(stringResource(R.string.sheet_moon_subtitle, phase, illumPct), fontSize = 15.sp, color = Color.White.copy(alpha = 0.72f))
             }
 
             MoonSignature(position.illumination, position.waxing)
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                FactRow("Salida", timeText(times?.moonrise)) {
+                FactRow(stringResource(R.string.sheet_moon_rise), timeText(times?.moonrise)) {
                     Icon(painterResource(R.drawable.ic_arrow_up), contentDescription = null,
                         tint = Palette.tempBlue, modifier = Modifier.size(20.dp))
                 }
-                FactRow("Puesta", timeText(times?.moonset)) {
+                FactRow(stringResource(R.string.sheet_moon_set), timeText(times?.moonset)) {
                     Icon(painterResource(R.drawable.ic_arrow_down), contentDescription = null,
                         tint = Palette.tempBlue, modifier = Modifier.size(20.dp))
                 }
-                FactRow("Próxima llena", eventText(MoonPhaseMath.nextFullMoon(now), now)) {
+                FactRow(stringResource(R.string.sheet_moon_next_full), eventText(MoonPhaseMath.nextFullMoon(now), now, context)) {
                     Icon(painterResource(R.drawable.ic_wx_clear_night), contentDescription = null,
                         tint = Color.White.copy(alpha = 0.92f), modifier = Modifier.size(20.dp))
                 }
-                FactRow("Próxima nueva", eventText(MoonPhaseMath.nextNewMoon(now), now), last = true) {
+                FactRow(stringResource(R.string.sheet_moon_next_new), eventText(MoonPhaseMath.nextNewMoon(now), now, context), last = true) {
                     Icon(painterResource(R.drawable.ic_wx_clear_night), contentDescription = null,
                         tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(20.dp))
                 }
             }
 
             Text(
-                text = "La fase y el porcentaje se calculan a partir de la posición real del Sol y la Luna; " +
-                    "salida y puesta, para tu ubicación. Las horas de las próximas fases son aproximadas " +
-                    "(unas horas de margen).",
+                text = stringResource(R.string.sheet_moon_footnote),
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.55f),
                 modifier = Modifier.padding(top = 2.dp),
@@ -131,19 +133,19 @@ private fun MoonSignature(illumination: Double, waxing: Boolean) {
 private fun timeText(instant: Instant?): String = instant?.let { hhmm(it) } ?: "—"
 
 private val monthDayFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("d MMM", Locale.forLanguageTag("es-ES")).withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()).withZone(ZoneId.systemDefault())
 
 /** "28 ago · en 5 días" — the date plus a relative-day tail (hoy / mañana / en N días). */
-private fun eventText(date: Instant, now: Instant): String {
+private fun eventText(date: Instant, now: Instant, context: Context): String {
     val zone = ZoneId.systemDefault()
     val days = ChronoUnit.DAYS.between(
         now.atZone(zone).toLocalDate(),
         date.atZone(zone).toLocalDate(),
     ).toInt()
     val tail = when {
-        days <= 0 -> "hoy"
-        days == 1 -> "mañana"
-        else -> "en $days días"
+        days <= 0 -> context.getString(R.string.sheet_moon_event_today)
+        days == 1 -> context.getString(R.string.sheet_moon_event_tomorrow)
+        else -> context.resources.getQuantityString(R.plurals.sheet_moon_event_in_days, days, days)
     }
     return "${monthDayFormatter.format(date)} · $tail"
 }

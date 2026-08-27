@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mab.aura.R
@@ -64,7 +65,7 @@ fun AuraUVCard(
     // Today's daytime UV hours from CAMS — the per-hour granularity AEMET's daily-max lacks.
     val today = hourly.todaySlots(now).filter { it.uv > 0 }
 
-    AuraSection("Índice UV".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_uv_title).uppercase(), size, modifier = modifier) {
         AuraDetailCard(size, sheet = { onClose -> AuraUVSheet(uvIndex, cloudy, onClose) }) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -89,7 +90,7 @@ fun AuraUVCard(
                             )
                         }
                         Text(
-                            text = "Máx. hoy",
+                            text = stringResource(R.string.card_uv_max_today),
                             fontSize = size.smallSize - 2,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White.copy(alpha = 0.6f),
@@ -190,7 +191,7 @@ private fun UVHourStrip(
                 val band = UVIndex(nowSlot.index).bandName.lowercase()
                 val cloud = if (cloudy) "☁ " else ""
                 Text(
-                    text = "${cloud}Ahora ${nowSlot.index} ($band)",
+                    text = stringResource(R.string.card_uv_now, cloud, nowSlot.index, band),
                     fontSize = size.smallSize - 2,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
@@ -198,9 +199,13 @@ private fun UVHourStrip(
                 )
                 Text("·", fontSize = size.smallSize - 2, color = Color.White.copy(alpha = 0.4f))
             }
-            readout.peakIndex?.let { peakIdx ->
+            // Peak index and its hour come from the same slot, so show the line only when both are present
+            // (the format string needs a non-null hour for %2$d).
+            val peakIdx = readout.peakIndex
+            val peakHour = readout.peakHour
+            if (peakIdx != null && peakHour != null) {
                 Text(
-                    text = "máx $peakIdx a las ${readout.peakHour}h",
+                    text = stringResource(R.string.card_uv_peak, peakIdx, peakHour),
                     fontSize = size.smallSize - 2,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White.copy(alpha = 0.7f),
@@ -213,7 +218,7 @@ private fun UVHourStrip(
         // where the index sits at or above the WHO threshold of 3.
         readout.protection?.let { w ->
             Text(
-                text = "Protégete de ${w.first}h a ${w.last}h",
+                text = stringResource(R.string.card_uv_protection, w.first, w.last),
                 fontSize = size.smallSize - 2,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White.copy(alpha = 0.7f),

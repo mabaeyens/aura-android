@@ -7,15 +7,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.UVNow
 import com.mab.aura.core.model.WeatherSnapshot
@@ -60,6 +64,7 @@ fun AuraForecastStack(
 ) {
     // Tune every card's scrim to the sky, then compose. CompositionLocalProvider is Compose's equivalent of the
     // Swift `.environment(\.auraCardScrim, ...)` that wrapped the whole VStack.
+    val context = LocalContext.current
     CompositionLocalProvider(LocalAuraCardScrim provides cardScrim(snapshot, now)) {
         Column(
             modifier = modifier.fillMaxWidth(),
@@ -124,6 +129,7 @@ fun AuraForecastStack(
                 text = forecastCredit(
                     hasAir = snapshot.airQuality != null,
                     hasHourlyUV = (snapshot.uvHourly ?: emptyList()).isNotEmpty(),
+                    context = context,
                 ),
                 fontSize = size.smallSize - 4,   // Swift's literal 14 on phone
                 fontWeight = FontWeight.Medium,
@@ -142,7 +148,7 @@ fun AuraForecastStack(
  * ("AEMET", "AEMET y MITECO", "AEMET, MITECO y Copernicus", "AEMET y Copernicus"). Copernicus = the CAMS UV
  * via Open-Meteo behind the hourly curve. Direct port of the Swift `credit` static.
  */
-internal fun forecastCredit(hasAir: Boolean, hasHourlyUV: Boolean): String {
+internal fun forecastCredit(hasAir: Boolean, hasHourlyUV: Boolean, context: Context): String {
     val sources = buildList {
         add("AEMET")
         if (hasAir) add("MITECO")
@@ -151,9 +157,13 @@ internal fun forecastCredit(hasAir: Boolean, hasHourlyUV: Boolean): String {
     val list = if (sources.size == 1) {
         sources[0]
     } else {
-        sources.dropLast(1).joinToString(", ") + " y " + sources.last()
+        context.getString(
+            R.string.card_forecast_list_conjunction,
+            sources.dropLast(1).joinToString(", "),
+            sources.last(),
+        )
     }
-    return "Elaborado con datos de $list"
+    return context.getString(R.string.card_forecast_credit, list)
 }
 
 /**

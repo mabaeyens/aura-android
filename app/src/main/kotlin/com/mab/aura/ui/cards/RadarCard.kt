@@ -1,5 +1,6 @@
 package com.mab.aura.ui.cards
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +18,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import java.time.Duration
 import java.time.Instant
 
@@ -50,12 +54,13 @@ fun AuraRadarCard(
     modifier: Modifier = Modifier,
     now: Instant = Instant.now(),
 ) {
-    AuraSection("Radar".uppercase(), size, modifier = modifier) {
+    val context = LocalContext.current
+    AuraSection(stringResource(R.string.card_radar_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Image(
                     bitmap = radar.image,
-                    contentDescription = "Radar de ${radar.siteName}",
+                    contentDescription = stringResource(R.string.card_radar_content_description, radar.siteName),
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -65,12 +70,12 @@ fun AuraRadarCard(
                 DbzLegend(size)
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = subtitle(radar, now),
+                        text = subtitle(radar, now, context),
                         fontSize = size.smallSize,
                         color = Color.White.copy(alpha = 0.65f),
                     )
                     Text(
-                        text = "Reflectividad · alcance $RANGE_KM km",
+                        text = stringResource(R.string.card_radar_reflectivity, RANGE_KM),
                         fontSize = size.smallSize - 1,
                         color = Color.White.copy(alpha = 0.5f),
                         maxLines = 1,
@@ -85,10 +90,14 @@ fun AuraRadarCard(
 private const val RANGE_KM = 240
 
 /** "Radar de Madrid · hace 6 min", or "· ahora" for a just-fetched frame. */
-private fun subtitle(radar: AuraRadarInfo, now: Instant): String {
+private fun subtitle(radar: AuraRadarInfo, now: Instant, context: Context): String {
     val mins = Duration.between(radar.time, now).toMinutes()
-    val freshness = if (mins <= 0) "ahora" else "hace $mins min"
-    return "Radar de ${radar.siteName} · $freshness"
+    val freshness = if (mins <= 0) {
+        context.getString(R.string.card_radar_now)
+    } else {
+        context.getString(R.string.card_radar_ago, mins)
+    }
+    return context.getString(R.string.card_radar_subtitle, radar.siteName, freshness)
 }
 
 /**
@@ -119,7 +128,12 @@ private fun DbzLegend(size: AuraSize) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            listOf("Débil", "Moderada", "Fuerte", "Torrencial").forEach { label ->
+            listOf(
+                stringResource(R.string.card_radar_intensity_weak),
+                stringResource(R.string.card_radar_intensity_moderate),
+                stringResource(R.string.card_radar_intensity_strong),
+                stringResource(R.string.card_radar_intensity_torrential),
+            ).forEach { label ->
                 Text(
                     text = label,
                     fontSize = size.smallSize - 3,

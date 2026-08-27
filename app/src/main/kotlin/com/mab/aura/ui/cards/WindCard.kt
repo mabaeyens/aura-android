@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import android.content.Context
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mab.aura.R
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.AuraWindRose
 import com.mab.aura.ui.sheets.AuraBeaufortSheet
@@ -31,7 +35,8 @@ fun AuraWindCard(
     size: AuraSize,
     modifier: Modifier = Modifier,
 ) {
-    AuraSection("Viento".uppercase(), size, modifier = modifier) {
+    val context = LocalContext.current
+    AuraSection(stringResource(R.string.card_wind_title).uppercase(), size, modifier = modifier) {
         AuraDetailCard(size, sheet = { onClose -> AuraBeaufortSheet(snapshot, onClose) }) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(size.stackSpacing),
@@ -51,14 +56,14 @@ fun AuraWindCard(
                         maxLines = 1,
                     )
                     Text(
-                        text = directionText(snapshot),
+                        text = directionText(snapshot, context),
                         fontSize = size.smallSize,
                         color = Color.White.copy(alpha = 0.7f),
                         maxLines = 2,
                     )
                     snapshot.windGust?.let { gust ->
                         Text(
-                            text = "Rachas $gust km/h",
+                            text = stringResource(R.string.card_wind_gust, gust),
                             fontSize = size.smallSize,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White.copy(alpha = 0.9f),
@@ -76,8 +81,8 @@ fun AuraWindCard(
  * numeric bearing (the reported 16-point sector, in degrees) rides beside it. Ported from the Swift
  * `directionText`.
  */
-private fun directionText(snapshot: WeatherSnapshot): String {
+private fun directionText(snapshot: WeatherSnapshot, context: Context): String {
     val dir = snapshot.windDirection
-    if (dir == null || (snapshot.windSpeed ?: 0) <= 0) return "En calma"
-    return "del ${dir.spanishName} · ${dir.degrees.toInt()}°"
+    if (dir == null || (snapshot.windSpeed ?: 0) <= 0) return context.getString(R.string.card_wind_calm)
+    return context.getString(R.string.card_wind_direction, dir.spanishName, dir.degrees.toInt())
 }

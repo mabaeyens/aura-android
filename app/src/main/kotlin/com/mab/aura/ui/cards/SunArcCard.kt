@@ -1,5 +1,6 @@
 package com.mab.aura.ui.cards
 
+import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -16,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,8 +54,9 @@ fun AuraSunArcCard(
 ) {
     val sunrise = snapshot.sunrise
     val sunset = snapshot.sunset
+    val context = LocalContext.current
 
-    AuraSection("Sol".uppercase(), size, modifier = modifier) {
+    AuraSection(stringResource(R.string.card_sunarc_title).uppercase(), size, modifier = modifier) {
         AuraDetailCard(size, sheet = { onClose -> AuraSolarSheet(snapshot, now, onClose) }) {
             if (sunrise != null && sunset != null) {
                 // Today's solar solve for this location — the source of civil twilight. nil without coords.
@@ -89,18 +93,18 @@ fun AuraSunArcCard(
                     // Orto on the left, ocaso on the right, each with its civil-twilight time beneath.
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                         SunEnd(
-                            icon = R.drawable.ic_wx_sunrise, label = "Orto", time = sunrise,
-                            civilLabel = "Primera luz", civilTime = solar?.civilDawn, size = size,
+                            icon = R.drawable.ic_wx_sunrise, label = stringResource(R.string.card_sunarc_sunrise), time = sunrise,
+                            civilLabel = stringResource(R.string.card_sunarc_first_light), civilTime = solar?.civilDawn, size = size,
                         )
                         Spacer(Modifier.weight(1f))
                         SunEnd(
-                            icon = R.drawable.ic_wx_sunset, label = "Ocaso", time = sunset,
-                            trailing = true, civilLabel = "Última luz", civilTime = solar?.civilDusk, size = size,
+                            icon = R.drawable.ic_wx_sunset, label = stringResource(R.string.card_sunarc_sunset), time = sunset,
+                            trailing = true, civilLabel = stringResource(R.string.card_sunarc_last_light), civilTime = solar?.civilDusk, size = size,
                         )
                     }
 
                     CenteredLine(
-                        text = sunReadout(now, sunrise, sunset),
+                        text = sunReadout(now, sunrise, sunset, context),
                         fontSize = size.smallSize + 1,
                         alpha = 0.82f,
                     )
@@ -108,15 +112,15 @@ fun AuraSunArcCard(
                     // Solar noon (the apex) and today's daylight length + delta — both from the same
                     // orto/ocaso, no new data. Dimmer than the readout, so they read as secondary.
                     solarNoon(sunrise, sunset)?.let { noon ->
-                        CenteredLine("Mediodía solar ${hhmm(noon)}", size.smallSize, alpha = 0.6f)
+                        CenteredLine(stringResource(R.string.card_sunarc_solar_noon, hhmm(noon)), size.smallSize, alpha = 0.6f)
                     }
-                    dayLengthLine(snapshot, now, sunrise, sunset)?.let { line ->
+                    dayLengthLine(snapshot, now, sunrise, sunset, context)?.let { line ->
                         CenteredLine(line, size.smallSize, alpha = 0.6f, maxLines = 1)
                     }
                 }
             } else {
                 Text(
-                    text = "Horario solar no disponible",
+                    text = stringResource(R.string.card_sunarc_unavailable),
                     fontSize = size.bodySize - 2,
                     color = Color.White.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
@@ -203,14 +207,14 @@ private fun sunFraction(now: Instant, sunrise: Instant, sunset: Instant): Float 
 }
 
 /** Centre line: daylight remaining while the sun is up, else the countdown to the next sunrise. */
-private fun sunReadout(now: Instant, sunrise: Instant, sunset: Instant): String {
+private fun sunReadout(now: Instant, sunrise: Instant, sunset: Instant, context: Context): String {
     val isDay = !now.isBefore(sunrise) && !now.isAfter(sunset)
     if (isDay) {
-        compact(now, sunset)?.let { return "Quedan $it de luz" }
+        compact(now, sunset)?.let { return context.getString(R.string.card_sunarc_daylight_remaining, it) }
     }
     // After dark the snapshot only carries today's sunrise; sun times barely move, so this morning's orto
     // stands in for tomorrow's — wrap the negative span by 24 h.
-    compact(now, sunrise, wrapDay = true)?.let { return "Amanece en $it" }
+    compact(now, sunrise, wrapDay = true)?.let { return context.getString(R.string.card_sunarc_sunrise_in, it) }
     return ""
 }
 
@@ -218,15 +222,15 @@ private fun sunReadout(now: Instant, sunrise: Instant, sunset: Instant): String 
  * The daylight-length line: total daylight, plus the day-over-day delta (a second [SolarTimes] solve of
  * yesterday from the snapshot's coordinates). The delta drops without coordinates or at a polar day/night.
  */
-private fun dayLengthLine(snapshot: WeatherSnapshot, now: Instant, sunrise: Instant, sunset: Instant): String? {
+private fun dayLengthLine(snapshot: WeatherSnapshot, now: Instant, sunrise: Instant, sunset: Instant, context: Context): String? {
     val len = compact(sunrise, sunset) ?: return null
-    var line = "$len de luz"
+    var line = context.getString(R.string.card_sunarc_daylight_total, len)
     val delta = dayLengthDeltaMinutes(snapshot, now, sunrise, sunset)
     if (delta != null) {
-        line += when {
-            delta > 0 -> " · $delta min más que ayer"
-            delta < 0 -> " · ${-delta} min menos que ayer"
-            else -> " · igual que ayer"
+        line += " · " + when {
+            delta > 0 -> context.getString(R.string.card_sunarc_delta_more, delta)
+            delta < 0 -> context.getString(R.string.card_sunarc_delta_less, -delta)
+            else -> context.getString(R.string.card_sunarc_delta_same)
         }
     }
     return line

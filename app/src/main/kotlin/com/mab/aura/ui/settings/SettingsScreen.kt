@@ -33,11 +33,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mab.aura.R
 import com.mab.aura.core.hero.HeroBackground
 
 /**
@@ -62,10 +64,10 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Ajustes") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -106,11 +108,11 @@ private fun ApiKeySection(
     // The plaintext key lives only here, in local screen state, and is cleared the moment it is saved.
     var keyInput by rememberSaveable { mutableStateOf("") }
 
-    SectionHeader("Clave API")
+    SectionHeader(stringResource(R.string.settings_api_key_header))
     OutlinedTextField(
         value = keyInput,
         onValueChange = { keyInput = it },
-        label = { Text("Clave de AEMET") },
+        label = { Text(stringResource(R.string.settings_aemet_key_label)) },
         singleLine = true,
         // Mask the token and switch off autocapitalisation/autocorrect — it is an opaque credential, not prose.
         visualTransformation = PasswordVisualTransformation(),
@@ -128,28 +130,29 @@ private fun ApiKeySection(
             },
             enabled = keyInput.isNotBlank(),
         ) {
-            Text("Guardar clave")
+            Text(stringResource(R.string.settings_save_key))
         }
         if (apiKeyPresent) {
             TextButton(onClick = onClear) {
-                Text("Borrar clave", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.settings_clear_key), color = MaterialTheme.colorScheme.error)
             }
         }
     }
     Text(
-        text = if (apiKeyPresent) "Clave guardada de forma cifrada." else "No hay clave guardada.",
+        text = if (apiKeyPresent) stringResource(R.string.settings_key_stored)
+        else stringResource(R.string.settings_key_absent),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (justSaved) {
         Text(
-            text = "Clave actualizada.",
+            text = stringResource(R.string.settings_key_updated),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
         )
     }
     Text(
-        text = "Si la predicción deja de actualizarse, pide otra clave gratis en opendata.aemet.es y pégala aquí.",
+        text = stringResource(R.string.settings_key_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -159,21 +162,21 @@ private fun ApiKeySection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ClockSection(use24h: Boolean, onChange: (Boolean) -> Unit) {
-    SectionHeader("Formato de hora")
+    SectionHeader(stringResource(R.string.settings_clock_header))
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         SegmentedButton(
             selected = use24h,
             onClick = { onChange(true) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-        ) { Text("24 h") }
+        ) { Text(stringResource(R.string.settings_clock_24h)) }
         SegmentedButton(
             selected = !use24h,
             onClick = { onChange(false) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-        ) { Text("12 h") }
+        ) { Text(stringResource(R.string.settings_clock_12h)) }
     }
     Text(
-        text = "Elige entre 24 horas (14:30) y 12 horas con AM/PM (2:30 PM). Se aplica en toda la app.",
+        text = stringResource(R.string.settings_clock_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -183,22 +186,21 @@ private fun ClockSection(use24h: Boolean, onChange: (Boolean) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HeroFamilySection(family: HeroBackground.Family, onChange: (HeroBackground.Family) -> Unit) {
-    SectionHeader("Fondo del cielo")
+    SectionHeader(stringResource(R.string.settings_hero_header))
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         SegmentedButton(
             selected = family == HeroBackground.Family.LANDSCAPE,
             onClick = { onChange(HeroBackground.Family.LANDSCAPE) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-        ) { Text("Paisaje") }
+        ) { Text(stringResource(R.string.settings_hero_landscape)) }
         SegmentedButton(
             selected = family == HeroBackground.Family.CITYSCAPE,
             onClick = { onChange(HeroBackground.Family.CITYSCAPE) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-        ) { Text("Ciudad") }
+        ) { Text(stringResource(R.string.settings_hero_cityscape)) }
     }
     Text(
-        text = "Elige la ilustración del cielo: un paisaje natural o una ciudad. El sol y la luna se dibujan " +
-            "encima en su posición real.",
+        text = stringResource(R.string.settings_hero_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -218,15 +220,15 @@ private fun AboutSection() {
         }.getOrDefault("?")
     }
 
-    SectionHeader("Acerca de")
-    Text("Versión $version", style = MaterialTheme.typography.bodyMedium)
+    SectionHeader(stringResource(R.string.settings_about_header))
+    Text(stringResource(R.string.settings_version, version), style = MaterialTheme.typography.bodyMedium)
     Text(
-        text = "Elaborado con datos de AEMET.",
+        text = stringResource(R.string.settings_about_data),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(
-        text = "Iconos del tiempo: Meteocons, de Bas Milius (licencia MIT).",
+        text = stringResource(R.string.settings_about_icons),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -15,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mab.aura.R
 import com.mab.aura.core.text.BulletinText
 import com.mab.aura.ui.theme.Palette
 
@@ -33,7 +35,7 @@ fun AuraBulletinCard(
     size: AuraSize,
     modifier: Modifier = Modifier,
 ) {
-    AuraSection("PREDICCIÓN", size) {
+    AuraSection(stringResource(R.string.card_bulletin_title), size) {
         AuraCard(size, modifier) {
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 if (phenomenon != null) {

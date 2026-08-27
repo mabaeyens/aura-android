@@ -55,7 +55,14 @@ fun WeatherSnapshot.Companion.make(
     val feelsNow = hourly?.let { currentFeelsLike(it, zone, now) }
     val stormNow = hourly?.let { currentStormProb(it, zone, now) }
     val resolved = hourly?.let { resolveHourly(it, zone, now) }
-    val currentSky = resolved?.current?.sky
+
+    // Hourly carry-forward: when the hourly feed is momentarily unavailable (the fetch failed or returned
+    // nothing, leaving [hourly] null), hold the last good current-hour reading from the prior snapshot rather
+    // than blanking every current* field — which would silently drop the hero to today's daily max and default
+    // the sky to a bare sun. Mirrors the observation carry-forward below; gated strictly on a wholly-absent
+    // feed so a fresh current hour never mixes with a stale one.
+    val carry: WeatherSnapshot? = if (hourly == null) previousObserved else null
+    val currentSky = resolved?.current?.sky ?: carry?.currentSky
 
     val days = daily.prediccion.dia.take(7).mapIndexedNotNull { idx, dia ->
         val date = parseDay(dia.fecha) ?: return@mapIndexedNotNull null
@@ -99,23 +106,23 @@ fun WeatherSnapshot.Companion.make(
         tempMin = today?.temperatura?.minima,
         tempMax = today?.temperatura?.maxima,
         humedadMax = today?.humedadRelativa?.maxima,
-        currentTemp = resolved?.current?.temp,
+        currentTemp = resolved?.current?.temp ?: carry?.currentTemp,
         observedTemp = obsTemp,
         observedStation = obsStation,
         observedStationDistanceKm = obsDistance,
         observedMetrics = obsMetrics,
         observedReading = obsReading,
-        currentSky = resolved?.current?.sky,
-        currentSkyText = resolved?.currentText,
-        currentHumidity = humidityNow,
-        currentPrecipProb = precipNow,
-        currentPrecipMm = precipMmNow,
-        currentSnowMm = snowMmNow,
-        currentFeelsLike = feelsNow,
-        currentStormProb = stormNow,
-        windSpeed = wind?.speed,
-        windDirection = wind?.direction,
-        windGust = wind?.gust,
+        currentSky = currentSky,
+        currentSkyText = resolved?.currentText ?: carry?.currentSkyText,
+        currentHumidity = humidityNow ?: carry?.currentHumidity,
+        currentPrecipProb = precipNow ?: carry?.currentPrecipProb,
+        currentPrecipMm = precipMmNow ?: carry?.currentPrecipMm,
+        currentSnowMm = snowMmNow ?: carry?.currentSnowMm,
+        currentFeelsLike = feelsNow ?: carry?.currentFeelsLike,
+        currentStormProb = stormNow ?: carry?.currentStormProb,
+        windSpeed = wind?.speed ?: carry?.windSpeed,
+        windDirection = wind?.direction ?: carry?.windDirection,
+        windGust = wind?.gust ?: carry?.windGust,
         airQuality = airQuality,
         uvIndex = uvIndex,
         uvHourly = uvHourly,
@@ -163,9 +170,12 @@ private fun resolveHourly(forecast: MunicipioHourly, zone: ZoneId, now: Instant)
     val upcoming = day0 + day1
 
     val current = upcoming.firstOrNull()
-    // Description for the current hour, from whichever day it came from.
-    val text = dias.firstOrNull()?.let { skyText(it, current?.hour) }
-        ?: if (dias.size > 1) skyText(dias[1], current?.hour) else null
+    // Description for the current hour, read from the *same* day the current slot came from. Once day 0's
+    // hours are all past, `current` is day 1's first hour, so its text must come from day 1 too — reading
+    // day 0's same-numbered hour would describe a different day and can disagree with the sky code (the
+    // "Nubes altas" text over a clear background). null here is honest; a wrong-day text is not.
+    val currentDia = if (day0.isEmpty()) dias.getOrNull(1) else dias.firstOrNull()
+    val text = currentDia?.let { skyText(it, current?.hour) }
 
     // Keep a full day ahead so the hourly strip has real data to scroll through (five show at once).
     return ResolvedHourly(current, text, upcoming.take(24))

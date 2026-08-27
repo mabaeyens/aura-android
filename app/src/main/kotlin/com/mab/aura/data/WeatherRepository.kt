@@ -219,7 +219,14 @@ class WeatherRepository(context: Context) {
                 uvHourly = uvHourly,
                 bulletin = bulletin,
             )
-            snapshotCache.upsert(snapshot)
+            // Don't let a thin snapshot overwrite a good one already cached for this location. The hourly
+            // carry-forward in make() already covers a wholly-absent feed (hourly null); this catches the
+            // other thin path — a fetch that succeeded but returned an empty/degenerate feed with no
+            // resolvable current hour, which carry-forward (gated on hourly null) skips. A real location
+            // switch or first-ever fetch, where the cache is null or itself thin, still writes.
+            if (snapshot.hasCurrentHourData || previous?.hasCurrentHourData != true) {
+                snapshotCache.upsert(snapshot)
+            }
         }
 
         // Fresh data is in the cache — re-render every Home Screen widget so it doesn't wait for its own slow

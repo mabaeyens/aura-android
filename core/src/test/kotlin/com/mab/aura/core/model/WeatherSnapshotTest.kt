@@ -43,9 +43,11 @@ class WeatherSnapshotTest {
     // --- heroTemp / heroIsObserved ---
 
     @Test
-    fun heroTemp_prefersCurrentThenFallsBackToMax() {
+    fun heroTemp_isCurrentHourForecastAndNeverFallsBackToDailyMax() {
         assertEquals(14, snapshot(currentTemp = 14, tempMax = 18).heroTemp)
-        assertEquals(18, snapshot(currentTemp = null, tempMax = 18).heroTemp)
+        // No current-hour reading → null (the card shows "—"), never today's high: a stale/missing
+        // hourly feed must not read as a real "now" temperature pinned to the day's peak.
+        assertNull(snapshot(currentTemp = null, tempMax = 18).heroTemp)
         assertNull(snapshot(currentTemp = null, tempMax = null).heroTemp)
         assertFalse(snapshot().heroIsObserved)
     }

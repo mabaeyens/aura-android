@@ -241,5 +241,102 @@ class WeatherSnapshotFactoryTest {
         assertNull(s.windSpeed)
         assertTrue(s.hours.isEmpty())
         assertFalse(s.hasCurrentHourData)
+        assertNull(s.heroTemp)   // hero shows "—", never today's daily max
+    }
+
+    // --- hourly carry-forward ---
+    // When this cycle's `horaria` fetch fails or returns nothing (`hourly` null), make() must hold the last
+    // good current-hour reading from the prior snapshot rather than blanking every current* field — which
+    // silently dropped the hero to today's daily max and defaulted the sky to a bare sun ("29 and clear").
+    // A fresh feed, when present, always wins over the carried values.
+
+    @Test
+    fun make_hourlyFailureCarriesForwardCurrentHour() {
+        val previous = WeatherSnapshot.make(location, daily(), hourly(), zone = madrid, now = now)
+        assertEquals(24, previous.currentTemp)
+        assertEquals("11", previous.currentSky)
+
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = previous, zone = madrid, now = now)
+
+        assertEquals(previous.currentTemp, rebuilt.currentTemp)
+        assertEquals(previous.currentSky, rebuilt.currentSky)
+        assertEquals(previous.currentSkyText, rebuilt.currentSkyText)
+        assertEquals(previous.currentHumidity, rebuilt.currentHumidity)
+        assertEquals(previous.windSpeed, rebuilt.windSpeed)
+        assertEquals(previous.currentTemp, rebuilt.heroTemp)   // hero is the carried reading, not tempMax
+        assertTrue(rebuilt.hasCurrentHourData)                 // carried data must not read as thin
+    }
+
+    @Test
+    fun make_freshHourlyWinsOverCarry() {
+        val fresh = WeatherSnapshot.make(location, daily(), hourly(), zone = madrid, now = now)
+        assertEquals(24, fresh.currentTemp)
+
+        // A prior snapshot with a deliberately divergent current-hour reading, which must be ignored.
+        val stale = WeatherSnapshot(ine = "28079", localidad = "Madrid", provincia = "Madrid",
+            currentTemp = 99, currentSky = "99", currentSkyText = "Inventado", updated = now)
+        val withStale = WeatherSnapshot.make(location, daily(), hourly(),
+            observed = null, previousObserved = stale, zone = madrid, now = now)
+
+        assertEquals(fresh.currentTemp, withStale.currentTemp)
+        assertNotEquals(99, withStale.currentTemp)
+        assertEquals(fresh.currentSky, withStale.currentSky)
+    }
+
+    // --- current-hour description follows the day the current slot came from ---
+    // When day 0's hours are all past, the resolved current hour rolls into day 1, and its sky *text* must be
+    // read from day 1 too. The old code tried day 0 first at the same hour number and only fell through to
+    // day 1 when day 0 had no entry — so a day 0 entry that happened to exist there won, describing a
+    // different day than the sky code the glyph and background use ("Nubes altas" over a clear sky).
+
+    // Day 0 holds only past hours (6, 7) plus an hour-0 trap with a wrong-day description; day 1 is a normal
+    // early strip whose hour 0 says something else.
+    private fun rolloverHourly() = MunicipioHourly(
+        nombre = "Madrid", provincia = "Madrid",
+        prediccion = MunicipioHourly.Prediccion(
+            dia = listOf(
+                MunicipioHourly.Dia(
+                    fecha = "2026-08-21T00:00:00",
+                    temperatura = hv("20" to "06", "20" to "07"),
+                    estadoCielo = listOf(
+                        MunicipioHourly.SkyValue(value = "11", periodo = "00", descripcion = "Despejado dia0"),
+                        MunicipioHourly.SkyValue(value = "11", periodo = "06", descripcion = "Despejado dia0"),
+                        MunicipioHourly.SkyValue(value = "11", periodo = "07", descripcion = "Despejado dia0"),
+                    ),
+                    humedadRelativa = emptyList(),
+                    probPrecipitacion = emptyList(),
+                ),
+                MunicipioHourly.Dia(
+                    fecha = "2026-08-22T00:00:00",
+                    temperatura = hv("18" to "00", "18" to "01"),
+                    estadoCielo = listOf(
+                        MunicipioHourly.SkyValue(value = "17", periodo = "00", descripcion = "Nubes altas"),
+                        MunicipioHourly.SkyValue(value = "17", periodo = "01", descripcion = "Nubes altas"),
+                    ),
+                    humedadRelativa = emptyList(),
+                    probPrecipitacion = emptyList(),
+                ),
+            ),
+        ),
+    )
+
+    @Test
+    fun make_currentTextFollowsTheDayTheCurrentHourCameFrom() {
+        // 08:00 UTC = 10:00 Madrid; day 0's hours (6, 7) are all past, so the current hour rolls into day 1.
+        val nowRoll = Instant.parse("2026-08-21T08:00:00Z")
+        val s = WeatherSnapshot.make(location, daily(), rolloverHourly(), zone = madrid, now = nowRoll)
+        assertEquals("17", s.currentSky)                     // sky code is day 1's current hour
+        assertEquals("Nubes altas", s.currentSkyText)        // text must come from the same day as the code
+        assertNotEquals("Despejado dia0", s.currentSkyText)  // day 0's same-hour text must not leak in
+    }
+
+    @Test
+    fun make_currentTextStaysOnDayZeroWhileItHasUpcomingHours() {
+        // 04:00 UTC = 06:00 Madrid; day 0 still has hour 6 ahead, so the text stays day 0's.
+        val nowEarly = Instant.parse("2026-08-21T04:00:00Z")
+        val s = WeatherSnapshot.make(location, daily(), rolloverHourly(), zone = madrid, now = nowEarly)
+        assertEquals("11", s.currentSky)
+        assertEquals("Despejado dia0", s.currentSkyText)
     }
 }

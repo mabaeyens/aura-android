@@ -104,11 +104,15 @@ data class WeatherSnapshot(
     val updated: Instant,
 ) {
     /**
-     * The card's "now" hero temperature: the current-hour forecast, falling back to today's high only
-     * when the hourly feed is missing. Deliberately *not* the observed-station reading — a warm nearby
-     * station can read the day's max hours before the forecast says it will, pinning the gauge to the high.
+     * The card's "now" hero temperature: the current-hour forecast, or null when no current-hour reading
+     * is available — the card shows "—" rather than a stand-in. Deliberately *not* today's high: falling
+     * back to [tempMax] made a momentarily-missing hourly feed read as a real "now" temperature pinned to
+     * the day's peak (the regression this replaced). Also *not* the observed-station reading — a warm
+     * nearby station can read the day's max hours before the forecast says it will, pinning the gauge to
+     * the high. A momentarily-missing feed is instead held over from the last good snapshot in
+     * `WeatherSnapshotFactory`, so this is null only on a cold start with no prior reading.
      */
-    val heroTemp: Int? get() = currentTemp ?: tempMax
+    val heroTemp: Int? get() = currentTemp
 
     /** Whether the hero is a real station observation. Now always false — kept for API compatibility. */
     val heroIsObserved: Boolean get() = false

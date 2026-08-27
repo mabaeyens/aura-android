@@ -14,13 +14,14 @@ import com.mab.aura.ui.theme.Palette
 import java.time.Instant
 
 /**
- * How much of the wide art's sky to trim off the **top** before the widget shows it. The art is 4:3 (a tall
- * frame with a lot of sky); the Glance tile is short and wide, so Glance centre-crops it to the middle band.
- * Left alone that middle band is mostly sky. Dropping this fraction from the top first shifts the centre-crop
- * downward, so the tile reads more of the scene (skyline, hills) and less empty sky. Tune to taste; 0.2 keeps
- * the lower 80% of the art.
+ * How much of the wide art's sky to trim off the **top** on a **wide/short** tile (e.g. 4x2) before Glance
+ * centre-crops it. The art is 4:3 (a tall frame with a lot of sky); a short tile would otherwise centre-crop
+ * to a thin middle band that is mostly sky, so dropping this fraction from the top first shifts that crop down
+ * to the scene (skyline, hills). A **tall** tile (e.g. 2x4) keeps its taller crop, which already shows plenty
+ * of scene, so it gets no trim — the choice is made per tile in the widget composition where the tile size is
+ * known (see `WidgetContent` in AuraGlanceWidget). 0.35 keeps the lower 65% of the art.
  */
-private const val SKY_CUT = 0.2f
+internal const val SKY_CUT_WIDE = 0.35f
 
 /**
  * The widget's background: the real **wide** hero scene for this sky and time of day, or null to fall back to
@@ -31,8 +32,8 @@ private const val SKY_CUT = 0.2f
  * can't draw the live sun/moon over the art (RemoteViews has no Canvas), so the scene stands on its own — the
  * time of day and condition are what the baked art already carries; the moving sun is the one phone-only touch.
  *
- * The loaded art has its top [SKY_CUT] of sky trimmed so the widget favours the scene over empty sky (see the
- * constant's note). Glance has no crop-alignment knob, so this is done here on the bitmap, not in the layout.
+ * Returns the **full** art. The sky trim is tile-shape dependent (see [SKY_CUT_WIDE]) and the tile size is only
+ * known in the composition, so [cropTopSky] is applied there, not here.
  */
 internal fun wideHeroBitmap(
     context: Context,
@@ -44,19 +45,18 @@ internal fun wideHeroBitmap(
     val name = HeroBackground.wideName(snapshot, now, family) { it in available }
         ?: HeroBackground.wideBaseName(snapshot, now, family)?.takeIf { it in available }
         ?: return null
-    val full = HeroImages.loadWide(context, name) ?: return null
-    return cropTopSky(full)
+    return HeroImages.loadWide(context, name)
 }
 
 /**
- * Return the art with its top [SKY_CUT] removed, keeping the lower band. [Bitmap.createBitmap] with a
+ * Return the art with its top [cut] fraction removed, keeping the lower band. [Bitmap.createBitmap] with a
  * sub-region hands back a new bitmap for that rectangle, so the original is left untouched. A zero or
- * out-of-range cut just returns the source unchanged (defensive; SKY_CUT is a small constant today).
+ * out-of-range cut returns the source unchanged — that is the tall-tile path, which trims nothing.
  */
-private fun cropTopSky(src: Bitmap): Bitmap {
-    val cut = (src.height * SKY_CUT).toInt()
-    if (cut <= 0 || cut >= src.height) return src
-    return Bitmap.createBitmap(src, 0, cut, src.width, src.height - cut)
+internal fun cropTopSky(src: Bitmap, cut: Float): Bitmap {
+    val px = (src.height * cut).toInt()
+    if (px <= 0 || px >= src.height) return src
+    return Bitmap.createBitmap(src, 0, px, src.width, src.height - px)
 }
 
 /**

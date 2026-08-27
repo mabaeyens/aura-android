@@ -126,8 +126,19 @@ private fun WidgetContent(
         // is 4:3), or the thin procedural gradient stretched to fill. A flat night colour shows before the
         // first cache write.
         if (background != null) {
+            val provider = if (backgroundIsHero) {
+                // The sky trim is per tile. A wide/short tile (e.g. 4x2) would centre-crop to a thin, mostly
+                // sky band, so trim the top sky first (SKY_CUT_WIDE) to bring the scene up; a tall tile (e.g.
+                // 2x4) already shows plenty of scene under a centre-crop, so it gets no trim. Square tiles fall
+                // in with the wide case. LocalSize is the real tile size here (SizeMode.Exact).
+                val size = LocalSize.current
+                val cut = if (size.height > size.width) 0f else SKY_CUT_WIDE
+                ImageProvider(cropTopSky(background, cut))
+            } else {
+                ImageProvider(background)
+            }
             Image(
-                provider = ImageProvider(background),
+                provider = provider,
                 contentDescription = null,
                 contentScale = if (backgroundIsHero) ContentScale.Crop else ContentScale.FillBounds,
                 modifier = GlanceModifier.fillMaxSize(),

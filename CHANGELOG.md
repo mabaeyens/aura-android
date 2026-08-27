@@ -2,6 +2,15 @@
 
 Notable changes to aura-android, newest first.
 
+## [1.1.1] - 2026-08-27
+
+A corrected build resubmitted after review feedback, plus an English UI and a widget framing fix.
+
+- Every surface now names its open-data sources with links (AEMET OpenData, MITECO ICA, Copernicus CAMS via Open-Meteo) and carries a clear disclaimer that Aura is an independent app, not affiliated with or representing AEMET, MITECO, or any government entity.
+- English UI: the whole app chrome, the settings, help and about screens, the cards, the sheets and the widget now follow the device language, with English alongside Spanish. The generated forecast text and the official Spanish source content stay in Spanish.
+- Home-screen widget framing: on a wide tile the art now trims the top sky so the scene reads instead of empty sky, while a tall tile keeps its full framing.
+- Weekday and month names in the app now follow the device language.
+
 ## [1.1.0] - 2026-08-26
 
 First public build, for Play internal testing. I jumped straight to 1.1.0 so the Android version lines up with the parallel iOS 1.1.0; there was no public 0.1.0 or 1.0.0 on Android, and there is no tip jar yet.

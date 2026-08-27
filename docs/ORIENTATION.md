@@ -14,8 +14,8 @@ I built Aura on Apple platforms first, so I know Swift, SwiftUI, Xcode and Swift
 
 Two Gradle modules:
 
-- `:core` is `AuraKit`. Pure, portable logic, no UI. The first file ported is `core/src/main/kotlin/com/mab/aura/core/solar/SolarTimes.kt`, a line-for-line port of `SolarTimes.swift`. Its test is next to it under `src/test/`.
-- `:app` is the app target. Compose UI. `app/src/main/kotlin/com/mab/aura/MainActivity.kt` is the entry point; it calls into `:core` and draws the result.
+- `:core` is `AuraKit`. Pure, portable logic, no UI, now behaviourally complete (the AEMET client, parsers, `WeatherSnapshot`, the solar/lunar math, the forecast prose). A good first file to read is `core/src/main/kotlin/com/mab/aura/core/solar/SolarTimes.kt`, a line-for-line port of `SolarTimes.swift`. Each type's test sits next to it under `src/test/`.
+- `:app` is the app target. Compose UI. `app/src/main/kotlin/com/mab/aura/MainActivity.kt` is the entry point; it hosts the "Hoy" screen (`ui/hoy/`), the card stack (`ui/cards/`), the settings and locations screens, and the Glance widget (`widget/`), all fed by `:core`.
 
 A module's source lives under `src/main/kotlin/...`, tests under `src/test/kotlin/...`, and Android resources (strings, themes) under `src/main/res/...`. The app manifest, `AndroidManifest.xml`, declares the launchable activity, a bit like the app's Info.plist plus the `@main` entry point combined.
 
@@ -26,7 +26,7 @@ A module's source lives under `src/main/kotlin/...`, tests under `src/test/kotli
 - `let` (constant) is `val`; `var` is `var`, same as Swift.
 - String interpolation: Swift `\(x)` is Kotlin `$x` or `${x.foo}`.
 - No `Foundation`. Dates are `java.time` (`Instant`, `ZoneId`, `DateTimeFormatter`). `java.time` exists from Android 8.0 (our minSdk 26), so no extra setup is needed.
-- Force Spanish formatting explicitly with `Locale.forLanguageTag("es-ES")`, never the device default. Aura is a Spanish app regardless of the phone's system language.
+- Locale is split on purpose since 1.1.1. Display formatters that render UI (weekday and month names) use `Locale.getDefault()`, so they follow the device or per-app language, English or Spanish. Keep `Locale.forLanguageTag("es-ES")` only where the code parses or capitalizes Spanish *source* data (the MITECO CSV, station names), and `en_US_POSIX` for machine date parsing. The generated forecast prose, the AEMET bulletins and the CAP alerts stay Spanish regardless of the UI language, because their source is Spanish.
 
 ## Compose next to SwiftUI
 
@@ -53,6 +53,6 @@ In Android Studio, the same actions are the Run and Debug buttons and the Logcat
 - Gradle version alignment is strict. The pinned stack in `gradle/libs.versions.toml` interlocks; see the note in `CLAUDE.md` before changing anything.
 - Android has no Lock Screen widget surface like iOS. The widget port moves to a Home Screen widget built with Jetpack Glance. That is a genuine feature move, not a one-to-one port.
 - Background work is more restricted than on iOS (Doze, and aggressive battery savers on some manufacturers). The plan uses WorkManager and keeps the same idle-by-default discipline as the iOS app.
-- SF Symbols do not exist on Android. Weather icons will be Material Symbols or custom art.
+- SF Symbols do not exist on Android. The condition icons are [Meteocons](https://github.com/basmilius/weather-icons) (Bas Milius, MIT): bundled vector drawables, plus animated Lottie in the app's cards and the metric glyphs (sunrise, wind, humidity, UV). The Glance widget uses the static drawables, since RemoteViews can't animate.
 
 When in doubt about why the port is shaped a certain way, the answer is almost always in `aura-apps/specs/android-port.md`.

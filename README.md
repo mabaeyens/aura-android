@@ -2,17 +2,19 @@
 
 Aura is my personal weather app for Spain, powered by AEMET OpenData. This repository is the Android port: phone-only, native Kotlin and Jetpack Compose. The iOS/watchOS original lives in a separate repository, `aura-apps`, and the full porting plan (why every choice was made, since I am new to Android) is written up there in `specs/android-port.md`.
 
-This is early. Right now it is a working scaffold that builds end to end, not a finished app and not a release.
+The port is feature-complete on the phone. The current version is 1.1.1, prepared for Google Play internal testing (see `CHANGELOG.md`).
 
-## What builds today
+## What the app does
 
-- A two-module Gradle project that assembles a debug APK and passes its unit tests.
-- `MainActivity` shows Madrid's sunrise and sunset for today, computed by the shared `:core` module, as a small proof that the modules are wired together correctly.
+- A full "Hoy" screen: an on-device natural-language headline, current conditions, the hourly strip, a seven-day forecast, the sunrise to sunset arc, wind on the Beaufort scale, air quality (MITECO ICA), the UV index, the nearest radar, the official AEMET bulletin, and public-source weather news, all over a live sun-tracking sky with illustrated hero art.
+- A Home Screen widget (Jetpack Glance) that shows the active location's conditions and hourly strip from the shared cache, refreshed in the background by WorkManager.
+- Saved locations you manage by search or device fix, official AEMET warnings matched to your municipality, and the real observed temperature from the nearest AEMET station.
+- English and Spanish UI that follows the device language. Private by design: the AEMET key is stored encrypted on the device, there is no Aura server, and only the municipality ever leaves the phone.
 
 ## Project layout
 
-- `:app` is the phone app: Jetpack Compose with Material 3. Entry point is `app/src/main/kotlin/com/mab/aura/MainActivity.kt`. This is Android's rough equivalent of the SwiftUI app target.
-- `:core` is the portable logic, hand-ported from the Swift `AuraKit` package one file at a time. First piece in: `SolarTimes` (the NOAA sunrise/sunset math). This is the rough equivalent of `AuraKit`.
+- `:app` is the phone app: Jetpack Compose with Material 3, the "Hoy" screen and its card stack, the settings and locations screens, and the Glance widget. Entry point is `app/src/main/kotlin/com/mab/aura/MainActivity.kt`. This is Android's rough equivalent of the SwiftUI app target.
+- `:core` is the portable logic, hand-ported from the Swift `AuraKit` package one file at a time, and now behaviourally complete: the AEMET client, the parsers, `WeatherSnapshot` and its factory, the solar/lunar math, and the on-device forecast prose. This is the rough equivalent of `AuraKit`. It holds no `android.*` import.
 
 If you are coming from the iOS side (Swift, SwiftUI, Xcode, Swift Package Manager) and Android is unfamiliar, read `docs/ORIENTATION.md` first. It maps what you already know onto what this repository uses.
 
@@ -38,7 +40,7 @@ If Gradle cannot find Java or the SDK, make sure `JAVA_HOME` points at the JDK a
 
 ## Status and scope
 
-Phone only. No Wear OS and no tablet layout, by design. The Home Screen widget (Jetpack Glance), the full "Hoy" card stack, and the rest of the ports are still ahead; see `BACKLOG.md`.
+Phone only. No Wear OS and no tablet layout, by design. The full "Hoy" card stack and the Home Screen widget are ported and shipping; what remains is the Play Console rollout and optional polish. See `BACKLOG.md` for what is done and what is next, and `docs/RELEASE.md` for the release path.
 
 ## Attribution
 

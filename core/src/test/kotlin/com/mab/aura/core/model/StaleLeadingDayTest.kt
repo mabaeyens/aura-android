@@ -63,8 +63,8 @@ class StaleLeadingDayTest {
     @Test
     fun staleLeadingDay_doesNotBlankHero() {
         val s = WeatherSnapshot.make(location, daily(), staleLeadingHourly(), zone = madrid, now = morningOf28th)
-        assertEquals(20, s.heroTemp)   // today's 09:00, not "--"
-        assertNotEquals(19, s.heroTemp) // must not read yesterday's 21:00 tail temperature
+        assertEquals(20, s.heroTemp(morningOf28th, madrid))   // today's 09:00, not "--"
+        assertNotEquals(19, s.heroTemp(morningOf28th, madrid)) // must not read yesterday's 21:00 tail temperature
     }
 
     @Test
@@ -88,6 +88,6 @@ class StaleLeadingDayTest {
         """.trimIndent()
         val hourly = json.decodeFromString(MunicipioHourly.serializer(), payload)
         val s = WeatherSnapshot.make(location, daily(), hourly, zone = madrid, now = morningOf28th)
-        assertEquals(24, s.heroTemp)  // skips the 09:00/10:00 sky-only hours to the first with a temperature
+        assertEquals(24, s.heroTemp(morningOf28th, madrid))  // skips the 09:00/10:00 sky-only hours to the first with a temperature
     }
 }

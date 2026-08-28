@@ -44,12 +44,31 @@ class WeatherSnapshotTest {
 
     @Test
     fun heroTemp_isCurrentHourForecastAndNeverFallsBackToDailyMax() {
-        assertEquals(14, snapshot(currentTemp = 14, tempMax = 18).heroTemp)
+        // No strip here, so the display-time resolver falls through to the stored currentTemp.
+        val at = at("2024-01-15T12:00:00Z")
+        assertEquals(14, snapshot(currentTemp = 14, tempMax = 18).heroTemp(at, utc))
         // No current-hour reading → null (the card shows "—"), never today's high: a stale/missing
         // hourly feed must not read as a real "now" temperature pinned to the day's peak.
-        assertNull(snapshot(currentTemp = null, tempMax = 18).heroTemp)
-        assertNull(snapshot(currentTemp = null, tempMax = null).heroTemp)
+        assertNull(snapshot(currentTemp = null, tempMax = 18).heroTemp(at, utc))
+        assertNull(snapshot(currentTemp = null, tempMax = null).heroTemp(at, utc))
         assertFalse(snapshot().heroIsObserved)
+    }
+
+    @Test
+    fun heroTemp_resolvesFromTheStripAtDisplayTimeNotTheFrozenScalar() {
+        // A snapshot whose stored currentTemp is stale (yesterday's 5°) but whose strip carries today's
+        // absolutely-timestamped hours. The hero must read the strip against `now`, not the frozen scalar.
+        val today = at("2024-01-15T00:00:00Z")
+        fun slot(hour: Int, temp: Int) = HourSlot(
+            hour = hour, temp = temp, date = today.plusSeconds(hour * 3600L),
+        )
+        val s = snapshot(
+            currentTemp = 5,                                   // stale scalar from a prior build
+            hours = listOf(slot(9, 18), slot(10, 20), slot(11, 22)),
+            updated = today,
+        )
+        // At 10:00 the strip re-anchors to the 10:00 slot: hero is 20, not the frozen 5.
+        assertEquals(20, s.heroTemp(at("2024-01-15T10:00:00Z"), utc))
     }
 
     // --- hasCurrentHourData ---

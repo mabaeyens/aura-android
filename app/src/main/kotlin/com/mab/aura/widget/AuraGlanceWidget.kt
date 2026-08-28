@@ -244,7 +244,7 @@ private fun LocationRow(place: String, alert: WeatherAlert?) {
 @Composable
 private fun ConditionBlock(snapshot: WeatherSnapshot, now: Instant, medium: Boolean) {
     val glyph = WeatherIcon.glyph(snapshot.currentSky, snapshot.isNight(now))
-    val temp = snapshot.heroTemp?.let { "$it°" } ?: "--°"
+    val temp = snapshot.heroTemp(now)?.let { "$it°" } ?: "--°"
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // No colorFilter: the Meteocons drawables are full-colour (yellow sun, blue rain), so tinting

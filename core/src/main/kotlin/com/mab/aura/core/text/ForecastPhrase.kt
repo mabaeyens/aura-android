@@ -100,7 +100,7 @@ object ForecastPhrase {
         // Feels-like earns a mention only when it diverges from the temperature shown above (≥ 3°),
         // otherwise it just echoes the number the hero already displays.
         val feels = snapshot.currentFeelsLike
-        val ref = snapshot.heroTemp
+        val ref = snapshot.heroTemp(now)
         if (feels != null && ref != null && kotlin.math.abs(feels - ref) >= 3) {
             mid.add("sensación de $feels°")
         }

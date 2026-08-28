@@ -85,7 +85,7 @@ fun AuraHeroCard(
         )
 
         Text(
-            text = snapshot.heroTemp?.let { "$it°" } ?: "—",
+            text = snapshot.heroTemp(now, zone)?.let { "$it°" } ?: "—",
             fontSize = size.heroTemp,
             fontWeight = FontWeight.Bold,
             color = Color.White,

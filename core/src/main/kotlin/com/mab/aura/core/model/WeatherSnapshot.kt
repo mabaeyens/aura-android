@@ -104,15 +104,27 @@ data class WeatherSnapshot(
     val updated: Instant,
 ) {
     /**
-     * The card's "now" hero temperature: the current-hour forecast, or null when no current-hour reading
-     * is available — the card shows "—" rather than a stand-in. Deliberately *not* today's high: falling
-     * back to [tempMax] made a momentarily-missing hourly feed read as a real "now" temperature pinned to
-     * the day's peak (the regression this replaced). Also *not* the observed-station reading — a warm
-     * nearby station can read the day's max hours before the forecast says it will, pinning the gauge to
-     * the high. A momentarily-missing feed is instead held over from the last good snapshot in
-     * `WeatherSnapshotFactory`, so this is null only on a cold start with no prior reading.
+     * The card's "now" hero temperature, resolved at DISPLAY time from the timestamped strip — never a
+     * scalar frozen when the snapshot was built. [upcomingHours] re-anchors the strip to [now] (dropping
+     * past hours, reconstructing absolute instants for older cached slots), so this reads the first upcoming
+     * hour that actually carries a temperature. That is why a day-old cached snapshot still shows *today's*
+     * number with no fetch: the strip already spans ~24h of absolutely-timestamped hours, and the hero now
+     * reads it against the real clock exactly as the strip itself does. This must be a function, not a stored
+     * value — a value resolved once at build time is what blanked the hero to "--" at the 2026-08-28 day
+     * change, when a cache built the previous day was rendered past midnight against a stale current hour.
+     *
+     * Fallback order: (1) first upcoming strip hour with a temperature; (2) the stored [currentTemp] — itself
+     * the last good carried reading, never today's max — used only when the strip yields nothing (e.g. a thin
+     * carry-forward snapshot with an empty strip, or a cache so old the strip is exhausted, where a real-but-
+     * stale number still beats a blank); (3) null, the honest "—", only on a genuine cold start with neither.
+     *
+     * Deliberately *not* today's high (a missing hourly feed must not read as a "now" temperature pinned to
+     * the day's peak) and *not* the observed-station reading (a warm nearby station can read the day's max
+     * hours before the forecast says it will). Pass the location's [zone]; it defaults to Europe/Madrid to
+     * match [upcomingHours].
      */
-    val heroTemp: Int? get() = currentTemp
+    fun heroTemp(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): Int? =
+        upcomingHours(now, zone).firstOrNull { it.temp != null }?.temp ?: currentTemp
 
     /** Whether the hero is a real station observation. Now always false — kept for API compatibility. */
     val heroIsObserved: Boolean get() = false

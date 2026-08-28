@@ -241,7 +241,7 @@ class WeatherSnapshotFactoryTest {
         assertNull(s.windSpeed)
         assertTrue(s.hours.isEmpty())
         assertFalse(s.hasCurrentHourData)
-        assertNull(s.heroTemp)   // hero shows "—", never today's daily max
+        assertNull(s.heroTemp(now, madrid))   // hero shows "—", never today's daily max
     }
 
     // --- hourly carry-forward ---
@@ -264,7 +264,7 @@ class WeatherSnapshotFactoryTest {
         assertEquals(previous.currentSkyText, rebuilt.currentSkyText)
         assertEquals(previous.currentHumidity, rebuilt.currentHumidity)
         assertEquals(previous.windSpeed, rebuilt.windSpeed)
-        assertEquals(previous.currentTemp, rebuilt.heroTemp)   // hero is the carried reading, not tempMax
+        assertEquals(previous.currentTemp, rebuilt.heroTemp(now, madrid))   // hero is the carried reading, not tempMax
         assertTrue(rebuilt.hasCurrentHourData)                 // carried data must not read as thin
     }
 

@@ -126,6 +126,54 @@ data class WeatherSnapshot(
     fun heroTemp(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): Int? =
         upcomingHours(now, zone).firstOrNull { it.temp != null }?.temp ?: currentTemp
 
+    /**
+     * The whole current-conditions family resolved at DISPLAY time, the generalisation of [heroTemp] to every
+     * `current*` field. Returns a copy in which each field is re-derived from the strip re-anchored to [now]
+     * ([upcomingHours]) instead of trusting the scalar frozen when the snapshot was built. A day-old cache
+     * therefore shows *today's* sky, humidity, wind, feels-like and precip on the hero and every card with no
+     * fetch, and the hero can never disagree with the hourly strip's first column: both now read the same
+     * re-anchored strip. Every surface calls this once at its display boundary and then reads ordinary
+     * properties; no card re-implements now-resolution.
+     *
+     * Resolution rule — per-field first-non-null, each field independently: for each field, the value from the
+     * first upcoming hour that carries it. Temperature, sky and humidity can first appear at different hours
+     * (AEMET's rolling tail can lead with a sky-only hour), so a single "first column" would blank whatever
+     * that hour omits; taking each field from the first hour that has it never blanks and matches what
+     * [heroTemp] already does for temperature alone. Fallback order per field: (1) first upcoming strip hour
+     * carrying it; (2) the existing frozen scalar — itself the last good carried reading — so the result is
+     * never worse than today's snapshot (a thin carry-forward, or a cache written before the strip carried
+     * that field, still shows its carried scalar); the frozen scalar is only overwritten by a real strip
+     * value, never blanked by the strip's absence.
+     *
+     * An empty strip (a genuine cold start, or a thin snapshot with no carried hours) returns the snapshot
+     * unchanged — there is nothing to re-derive from, and the frozen scalars are already the best available.
+     *
+     * This must stay aligned with the iOS `resolved(at:)`: same field set, same per-field first-non-null rule,
+     * same fallback to the frozen scalar. If the platforms ever move to strip-first-column instead, change
+     * both together.
+     */
+    fun resolved(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): WeatherSnapshot {
+        val strip = upcomingHours(now, zone)
+        if (strip.isEmpty()) return this
+        // First upcoming hour carrying each field, else keep the frozen scalar. `firstNotNullOfOrNull` walks
+        // the strip in order and stops at the first hour whose selector is non-null — per-field, independently.
+        fun <T> first(select: (HourSlot) -> T?): T? = strip.firstNotNullOfOrNull(select)
+        return copy(
+            currentTemp = first { it.temp } ?: currentTemp,
+            currentSky = first { it.sky } ?: currentSky,
+            currentSkyText = first { it.skyText } ?: currentSkyText,
+            currentHumidity = first { it.humidity } ?: currentHumidity,
+            currentPrecipProb = first { it.precipProb } ?: currentPrecipProb,
+            currentPrecipMm = first { it.precipMm } ?: currentPrecipMm,
+            currentSnowMm = first { it.snowMm } ?: currentSnowMm,
+            currentFeelsLike = first { it.feelsLike } ?: currentFeelsLike,
+            currentStormProb = first { it.stormProb } ?: currentStormProb,
+            windSpeed = first { it.windSpeed } ?: windSpeed,
+            windDirection = first { it.windDirection } ?: windDirection,
+            windGust = first { it.windGust } ?: windGust,
+        )
+    }
+
     /** Whether the hero is a real station observation. Now always false — kept for API compatibility. */
     val heroIsObserved: Boolean get() = false
 
@@ -241,6 +289,24 @@ data class HourSlot(
     val windSpeed: Int? = null,
     /** km/h, peak gust for the hour; null when not reported. */
     val windGust: Int? = null,
+    // The rest of the current-conditions family, per hour, so [WeatherSnapshot.resolved] can re-derive every
+    // current* field at display time from the re-anchored strip — not just temperature. Each is nullable with
+    // a `= null` default so a `snapshots.json` written before these existed still decodes, and the resolver
+    // falls back to the snapshot's frozen scalar for whatever an older strip doesn't carry.
+    /** AEMET's Spanish description of the sky state (e.g. "Despejado"). */
+    val skyText: String? = null,
+    /** Relative humidity, %. */
+    val humidity: Int? = null,
+    /** Feels-like temperature, °C. */
+    val feelsLike: Int? = null,
+    /** Storm probability, %. */
+    val stormProb: Int? = null,
+    /** Rain amount, mm. 0 means dry; null means the feed didn't carry it. */
+    val precipMm: Double? = null,
+    /** Snow amount, mm. Same rules as [precipMm]. */
+    val snowMm: Double? = null,
+    /** Wind direction (whence it blows), or null when calm/unknown. */
+    val windDirection: WindDirection? = null,
     /**
      * The absolute instant this hour begins, so the strip can be re-anchored to the real current hour at
      * display time. Null for snapshots cached before this field existed (then [WeatherSnapshot.upcomingHours]

@@ -196,12 +196,27 @@ private fun buildSlots(dia: MunicipioHourly.Dia, zone: ZoneId): List<HourSlot> {
     val skies = firstWins(dia.estadoCielo.mapNotNull { s -> intKey(s.periodo)?.let { it to s.value } })
     val blocks = parseBlocks(dia.probPrecipitacion)
 
-    // Per-hour wind speed (entries carrying `velocidad`) and peak gust (entries carrying a scalar `value`),
-    // both from the mixed vientoAndRachaMax array.
+    // The rest of the current-conditions family, per hour, so the strip can feed WeatherSnapshot.resolved()
+    // at display time. Same single-hour keying as `temps` for the scalar arrays; the two probabilities come
+    // in the coarse multi-hour blocks like probPrecipitacion.
+    val skyTexts = firstWins(dia.estadoCielo.mapNotNull { s -> intKey(s.periodo)?.let { h -> s.descripcion?.let { h to it } } })
+    val humidities = firstWins(dia.humedadRelativa.mapNotNull { hv -> intKey(hv.periodo)?.let { h -> hv.value.toIntOrNull()?.let { h to it } } })
+    val feels = firstWins((dia.sensTermica ?: emptyList()).mapNotNull { hv -> intKey(hv.periodo)?.let { h -> hv.value.toIntOrNull()?.let { h to it } } })
+    val rain = firstWins((dia.precipitacion ?: emptyList()).mapNotNull { hv -> intKey(hv.periodo)?.let { h -> WeatherSnapshot.precipAmount(hv.value)?.let { h to it } } })
+    val snow = firstWins((dia.nieve ?: emptyList()).mapNotNull { hv -> intKey(hv.periodo)?.let { h -> WeatherSnapshot.precipAmount(hv.value)?.let { h to it } } })
+    val stormBlocks = parseBlocks(dia.probTormenta ?: emptyList())
+
+    // Per-hour wind speed (entries carrying `velocidad`), direction, and peak gust (entries carrying a scalar
+    // `value`), all from the mixed vientoAndRachaMax array.
     val winds = firstWins((dia.vientoAndRachaMax ?: emptyList()).mapNotNull { w ->
         val h = intKey(w.periodo) ?: return@mapNotNull null
         val v = w.velocidad?.firstOrNull()?.toIntOrNull() ?: return@mapNotNull null
         h to v
+    })
+    val dirs = firstWins((dia.vientoAndRachaMax ?: emptyList()).mapNotNull { w ->
+        val h = intKey(w.periodo) ?: return@mapNotNull null
+        val d = w.direccion?.firstOrNull() ?: return@mapNotNull null
+        WindDirection.fromAemet(d)?.let { h to it }
     })
     val gusts = firstWins((dia.vientoAndRachaMax ?: emptyList()).mapNotNull { w ->
         val raw = w.value ?: return@mapNotNull null
@@ -215,10 +230,14 @@ private fun buildSlots(dia: MunicipioHourly.Dia, zone: ZoneId): List<HourSlot> {
     val hours = (temps.keys + skies.keys).sorted()
     return hours.map { hour ->
         val prob = blocks.firstOrNull { hour in it.start until it.end }?.value
+        val storm = stormBlocks.firstOrNull { hour in it.start until it.end }?.value
         val date = dayStart?.plusHours(hour.toLong())?.toInstant()
         HourSlot(
             hour = hour, temp = temps[hour], sky = skies[hour], precipProb = prob,
-            windSpeed = winds[hour], windGust = gusts[hour], date = date,
+            windSpeed = winds[hour], windGust = gusts[hour],
+            skyText = skyTexts[hour], humidity = humidities[hour], feelsLike = feels[hour],
+            stormProb = storm, precipMm = rain[hour], snowMm = snow[hour], windDirection = dirs[hour],
+            date = date,
         )
     }
 }

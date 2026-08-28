@@ -1,5 +1,6 @@
 package com.mab.aura.core.model
 
+import com.mab.aura.core.wind.WindDirection
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -189,5 +190,33 @@ class WeatherSnapshotTest {
         assertNull(decoded.sunrise)
         assertEquals(emptyList<HourSlot>(), decoded.hours)
         assertEquals(day, decoded.updated)
+    }
+
+    @Test
+    fun serialization_hourSlotRoundTripsTheWholeCurrentFamily() {
+        val slot = HourSlot(
+            hour = 9, temp = 10, sky = "12", precipProb = 30, windSpeed = 12, windGust = 20,
+            skyText = "Poco nuboso", humidity = 48, feelsLike = 8, stormProb = 5,
+            precipMm = 0.4, snowMm = 0.0, windDirection = WindDirection.NE,
+            date = at("2024-01-15T09:00:00Z"),
+        )
+        val json = Json.encodeToString(HourSlot.serializer(), slot)
+        assertEquals(slot, Json.decodeFromString(HourSlot.serializer(), json))
+    }
+
+    @Test
+    fun serialization_olderHourSlotWithoutTheNewFamilyFieldsDecodesToNulls() {
+        // A slot written before HourSlot carried the family: only the original keys. The new fields must
+        // default to null so the resolver falls back to the snapshot's frozen scalars and self-heals.
+        val json = """{"hour":9,"temp":10,"sky":"12","precipProb":30,"windSpeed":12}"""
+        val decoded = Json.decodeFromString(HourSlot.serializer(), json)
+        assertEquals(10, decoded.temp)
+        assertNull(decoded.skyText)
+        assertNull(decoded.humidity)
+        assertNull(decoded.feelsLike)
+        assertNull(decoded.stormProb)
+        assertNull(decoded.precipMm)
+        assertNull(decoded.snowMm)
+        assertNull(decoded.windDirection)
     }
 }

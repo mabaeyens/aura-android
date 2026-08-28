@@ -81,8 +81,12 @@ class AuraGlanceWidget : GlanceAppWidget() {
         // outside the composition, once per update rather than per recomposition. The background is the real
         // wide hero scene for this sky + time of day, falling back to the procedural sky gradient.
         val settings = Settings(context)
-        val snapshot = SharedSnapshot.resolve(context, pinnedINE)
         val now = Instant.now()
+        // Resolve the current-conditions family at display time, before anything reads it. The widget renders
+        // from pure cache and is not refetched for an hour, so at a day change its frozen currentSky/currentTemp
+        // would be yesterday's; resolving re-derives them from the strip re-anchored to `now`. This must happen
+        // before the background bitmaps below, which read currentSky off the snapshot directly.
+        val snapshot = SharedSnapshot.resolve(context, pinnedINE)?.resolved(now)
         val family = HeroBackground.Family.from(settings.heroFamily.first())
         val hero = snapshot?.let { wideHeroBitmap(context, it, now, family) }
         val background = hero ?: snapshot?.let { skyGradientBitmap(it.currentSky) }

@@ -66,6 +66,49 @@ class WeatherSnapshotFactoryTest {
         assertNull(h11.windGust)         // no gust reported at 11h stays null, not 0
     }
 
+    // A dia carrying the whole current-conditions family, so buildSlots must stamp every field WeatherSnapshot
+    // .resolved() re-derives from the strip — not just temp/sky/precipProb/wind.
+    private fun fullFamilyDia(): MunicipioHourly.Dia {
+        val payload = """
+            {
+              "fecha": "2026-08-21T00:00:00",
+              "temperatura": [{"value":"22","periodo":"10"},{"value":"24","periodo":"11"}],
+              "estadoCielo": [{"value":"11","periodo":"10","descripcion":"Despejado"},{"value":"12","periodo":"11","descripcion":"Poco nuboso"}],
+              "humedadRelativa": [{"value":"50","periodo":"10"},{"value":"48","periodo":"11"}],
+              "probPrecipitacion": [{"value":"30","periodo":"0812"}],
+              "sensTermica": [{"value":"23","periodo":"10"},{"value":"26","periodo":"11"}],
+              "precipitacion": [{"value":"0","periodo":"10"},{"value":"1,2","periodo":"11"}],
+              "nieve": [{"value":"Ip","periodo":"10"}],
+              "probTormenta": [{"value":"15","periodo":"0812"}],
+              "vientoAndRachaMax": [
+                {"direccion":["NO"],"velocidad":["20"],"periodo":"10"},
+                {"direccion":["N"],"velocidad":["15"],"periodo":"11"}
+              ]
+            }
+        """.trimIndent()
+        return json.decodeFromString(MunicipioHourly.Dia.serializer(), payload)
+    }
+
+    @Test
+    fun slots_stampTheWholeCurrentFamilyPerHour() {
+        val slots = WeatherSnapshot.slots(fullFamilyDia(), madrid)
+        val h10 = slots.first { it.hour == 10 }
+        val h11 = slots.first { it.hour == 11 }
+        assertEquals("Despejado", h10.skyText)
+        assertEquals("Poco nuboso", h11.skyText)
+        assertEquals(50, h10.humidity)
+        assertEquals(23, h10.feelsLike)
+        assertEquals(26, h11.feelsLike)
+        assertEquals(0.0, h10.precipMm)          // "0" reads as dry
+        assertEquals(1.2, h11.precipMm)          // decimal comma parses
+        assertEquals(0.0, h10.snowMm)            // "Ip" (trace) reads as 0
+        assertNull(h11.snowMm)                   // no snow reported at 11h stays null
+        assertEquals(15, h10.stormProb)          // from the coarse 08-12 block
+        assertEquals(15, h11.stormProb)
+        assertEquals(WindDirection.fromAemet("NO"), h10.windDirection)
+        assertEquals(WindDirection.fromAemet("N"), h11.windDirection)
+    }
+
     // --- make() end-to-end mapping ---
 
     private val location = Location(ine = "28079", nombre = "Madrid", provincia = "Madrid",

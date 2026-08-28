@@ -1,5 +1,6 @@
 package com.mab.aura.core.model
 
+import com.mab.aura.core.wind.WindDirection
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -55,12 +56,17 @@ class DisplayFromCacheTest {
                "temperatura":[{"value":"16","periodo":"22"},{"value":"15","periodo":"23"}],
                "estadoCielo":[{"value":"11n","periodo":"22","descripcion":"Despejado"},{"value":"11n","periodo":"23","descripcion":"Despejado"}],
                "humedadRelativa":[{"value":"60","periodo":"22"},{"value":"62","periodo":"23"}],
-               "probPrecipitacion":[{"value":"0","periodo":"2024"}]},
+               "sensTermica":[{"value":"14","periodo":"22"},{"value":"13","periodo":"23"}],
+               "probPrecipitacion":[{"value":"0","periodo":"2024"}],
+               "vientoAndRachaMax":[{"direccion":["S"],"velocidad":["8"],"periodo":"22"}]},
               {"fecha":"2026-08-28T00:00:00",
                "temperatura":[{"value":"17","periodo":"07"},{"value":"19","periodo":"08"},{"value":"21","periodo":"09"},{"value":"23","periodo":"10"},{"value":"25","periodo":"11"}],
-               "estadoCielo":[{"value":"11","periodo":"07","descripcion":"Despejado"},{"value":"11","periodo":"08","descripcion":"Despejado"},{"value":"11","periodo":"09","descripcion":"Despejado"},{"value":"11","periodo":"10","descripcion":"Despejado"},{"value":"11","periodo":"11","descripcion":"Despejado"}],
+               "estadoCielo":[{"value":"11","periodo":"07","descripcion":"Despejado"},{"value":"11","periodo":"08","descripcion":"Despejado"},{"value":"12","periodo":"09","descripcion":"Poco nuboso"},{"value":"12","periodo":"10","descripcion":"Poco nuboso"},{"value":"12","periodo":"11","descripcion":"Poco nuboso"}],
                "humedadRelativa":[{"value":"55","periodo":"07"},{"value":"52","periodo":"08"},{"value":"48","periodo":"09"},{"value":"45","periodo":"10"},{"value":"42","periodo":"11"}],
-               "probPrecipitacion":[{"value":"0","periodo":"0612"}]}
+               "sensTermica":[{"value":"16","periodo":"07"},{"value":"18","periodo":"08"},{"value":"20","periodo":"09"},{"value":"22","periodo":"10"},{"value":"24","periodo":"11"}],
+               "probPrecipitacion":[{"value":"0","periodo":"0612"}],
+               "probTormenta":[{"value":"5","periodo":"0612"}],
+               "vientoAndRachaMax":[{"direccion":["NE"],"velocidad":["12"],"periodo":"09"},{"direccion":["NE"],"velocidad":["14"],"periodo":"10"}]}
             ]}}
         """.trimIndent()
         return json.decodeFromString(MunicipioHourly.serializer(), payload)
@@ -80,5 +86,41 @@ class DisplayFromCacheTest {
         assertEquals(21, hero)                 // today's number, straight from the day-old cache
         assertNotEquals(cached.currentTemp, hero)  // proves the hero is not the frozen 22:00 scalar
         assertNotEquals(cached.tempMax, hero)      // and not today's daily max (30)
+    }
+
+    @Test
+    fun dayOldCache_resolvesTheWholeCurrentFamilyToToday() {
+        val cached = WeatherSnapshot.make(location, daily(), hourly(), zone = madrid, now = builtOn27th)
+
+        // Every current* scalar is frozen at the 27th 22:00 build hour — the old day-stale bug rendered these.
+        assertEquals("11n", cached.currentSky)
+        assertEquals("Despejado", cached.currentSkyText)
+        assertEquals(60, cached.currentHumidity)
+        assertEquals(14, cached.currentFeelsLike)
+        assertEquals(8, cached.windSpeed)
+        assertEquals(WindDirection.fromAemet("S"), cached.windDirection)
+
+        // resolved() re-derives the whole family from the strip against the real clock: the 28th 09:00 hour.
+        val now = cached.resolved(openedOn28th, madrid)
+        assertEquals(21, now.currentTemp)                       // matches heroTemp — one mechanism
+        assertEquals(now.currentTemp, now.heroTemp(openedOn28th, madrid))
+        assertEquals("12", now.currentSky)                      // today's sky, not yesterday's "11n"
+        assertEquals("Poco nuboso", now.currentSkyText)
+        assertEquals(48, now.currentHumidity)
+        assertEquals(20, now.currentFeelsLike)
+        assertEquals(12, now.windSpeed)                         // first upcoming hour with wind (09:00)
+        assertEquals(WindDirection.fromAemet("NE"), now.windDirection)
+        assertEquals(5, now.currentStormProb)                   // from the 06-12 block
+
+        // The hero's sky can no longer disagree with the strip's first column: both are the 09:00 hour.
+        assertEquals(cached.upcomingHours(openedOn28th, madrid).first().sky, now.currentSky)
+    }
+
+    @Test
+    fun resolved_emptyStripReturnsSnapshotUnchanged() {
+        // A thin snapshot: daily only, no hourly feed and no prior to carry a strip from.
+        val thin = WeatherSnapshot.make(location, daily(), hourly = null, zone = madrid, now = builtOn27th)
+        assertEquals(emptyList<HourSlot>(), thin.hours)
+        assertEquals(thin, thin.resolved(openedOn28th, madrid))  // nothing to re-derive; frozen scalars stand
     }
 }

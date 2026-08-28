@@ -123,10 +123,16 @@ fun HoyScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        // Resolve the current-conditions family once, here at the top display boundary, so every surface below
+        // (the sky backdrop, the hero, the cards, the forecast phrase) reads today's values from the same
+        // re-anchored strip instead of scalars frozen when the snapshot was built. This is why a day-old cache
+        // shows today's sky/wind/humidity with no fetch, and why the hero can never disagree with the strip's
+        // first column. AuraSky and HoyContent are two siblings fed from the one snapshot, so the resolve must
+        // sit above both — resolving only inside HoyContent would leave AuraSky on the stale currentSky.
+        val resolved = (state as? HoyUiState.Content)?.snapshot?.resolved(now)
         // The sky backdrop follows the shown snapshot (null → a neutral high-noon sky), so even the loading
         // and no-key states sit over a real sky rather than a blank surface.
-        val backdrop = (state as? HoyUiState.Content)?.snapshot
-        AuraSky(snapshot = backdrop, modifier = Modifier.fillMaxSize(), now = now, family = heroFamily)
+        AuraSky(snapshot = resolved, modifier = Modifier.fillMaxSize(), now = now, family = heroFamily)
 
         when (val s = state) {
             HoyUiState.Loading -> CenteredMessage {
@@ -145,7 +151,9 @@ fun HoyScreen(
                 // "showing a default location" note; the latter shows only when the fetch itself was fine.
                 val effectiveNotice = s.notice ?: locationFallbackText(context, s.locationFallback, permissionAsked)
                 HoyContent(
-                    snapshot = s.snapshot,
+                    // The same resolved snapshot the backdrop uses (non-null in this branch); the elvis only
+                    // satisfies the nullable type since the compiler can't tie `resolved` back to `s`.
+                    snapshot = resolved ?: s.snapshot,
                     notice = effectiveNotice,
                     now = now,
                     radar = s.radar,

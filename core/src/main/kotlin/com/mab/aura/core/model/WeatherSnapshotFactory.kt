@@ -64,6 +64,11 @@ fun WeatherSnapshot.Companion.make(
     val carry: WeatherSnapshot? = if (hourly == null) previousObserved else null
     val currentSky = resolved?.current?.sky ?: carry?.currentSky
 
+    // Hero temperature: the first upcoming hour that actually carries a reading, not simply the first
+    // upcoming slot. AEMET's rolling tail can list a sky for an hour with no matching temperature, so taking
+    // that hour's (absent) temp blanked the hero to "--" even though the next hour has one.
+    val heroTemp = resolved?.strip?.firstOrNull { it.temp != null }?.temp
+
     val days = daily.prediccion.dia.take(7).mapIndexedNotNull { idx, dia ->
         val date = parseDay(dia.fecha) ?: return@mapIndexedNotNull null
         // Today (idx 0) follows the current hour: a clear morning shows a sun even when the afternoon turns
@@ -106,7 +111,7 @@ fun WeatherSnapshot.Companion.make(
         tempMin = today?.temperatura?.minima,
         tempMax = today?.temperatura?.maxima,
         humedadMax = today?.humedadRelativa?.maxima,
-        currentTemp = resolved?.current?.temp ?: carry?.currentTemp,
+        currentTemp = heroTemp ?: carry?.currentTemp,
         observedTemp = obsTemp,
         observedStation = obsStation,
         observedStationDistanceKm = obsDistance,
@@ -164,7 +169,7 @@ private data class ResolvedHourly(val current: HourSlot?, val currentText: Strin
 
 private fun resolveHourly(forecast: MunicipioHourly, zone: ZoneId, now: Instant): ResolvedHourly {
     val curHour = currentHour(now, zone)
-    val dias = forecast.prediccion.dia
+    val dias = futureDays(forecast, zone, now)
     val day0 = dias.firstOrNull()?.let { buildSlots(it, zone).filter { s -> s.hour >= curHour } } ?: emptyList()
     val day1 = if (dias.size > 1) buildSlots(dias[1], zone) else emptyList()
     val upcoming = day0 + day1
@@ -250,7 +255,7 @@ private fun currentWind(forecast: MunicipioHourly, zone: ZoneId, now: Instant): 
         return (readings.firstOrNull { it.first >= at } ?: readings.firstOrNull())?.second
     }
 
-    val dias = forecast.prediccion.dia
+    val dias = futureDays(forecast, zone, now)
     dias.firstOrNull()?.let { day0 -> wind(day0, from)?.let { return CurrentWind(it.first, it.second, gust(day0, from)) } }
     if (dias.size > 1) wind(dias[1], 0)?.let { return CurrentWind(it.first, it.second, gust(dias[1], 0)) }
     return CurrentWind(null, null, null)
@@ -272,7 +277,7 @@ private fun currentSingleHour(
     val from = currentHour(now, zone)
     fun inDia(dia: MunicipioHourly.Dia, at: Int): Int? =
         pickCurrentOrNext(array(dia).mapNotNull { hv -> intKey(hv.periodo)?.let { h -> hv.value.toIntOrNull()?.let { h to it } } }, at)
-    val dias = forecast.prediccion.dia
+    val dias = futureDays(forecast, zone, now)
     dias.firstOrNull()?.let { inDia(it, from)?.let { v -> return v } }
     if (dias.size > 1) inDia(dias[1], 0)?.let { return it }
     return null
@@ -294,7 +299,7 @@ private fun currentMm(
     val from = currentHour(now, zone)
     fun inDia(dia: MunicipioHourly.Dia, at: Int): Double? =
         pickCurrentOrNext((array(dia) ?: emptyList()).mapNotNull { hv -> intKey(hv.periodo)?.let { h -> WeatherSnapshot.precipAmount(hv.value)?.let { h to it } } }, at)
-    val dias = forecast.prediccion.dia
+    val dias = futureDays(forecast, zone, now)
     dias.firstOrNull()?.let { inDia(it, from)?.let { v -> return v } }
     if (dias.size > 1) inDia(dias[1], 0)?.let { return it }
     return null
@@ -319,7 +324,7 @@ private fun currentBlockProb(
         blocks.firstOrNull { it.start >= at }?.let { return it.value }
         return blocks.firstOrNull()?.value
     }
-    val dias = forecast.prediccion.dia
+    val dias = futureDays(forecast, zone, now)
     dias.firstOrNull()?.let { inDia(it, from)?.let { v -> return v } }
     if (dias.size > 1) inDia(dias[1], 0)?.let { return it }
     return null
@@ -354,6 +359,24 @@ private fun dailyPrecip(dia: MunicipioForecast.Dia): Int? =
     (dia.probPrecipitacion ?: emptyList()).mapNotNull { it.value }.maxOrNull()
 
 // --- Small shared helpers -------------------------------------------------------------------------------
+
+/**
+ * AEMET's hourly feed can briefly lead with a stale *past* day: for part of the morning its first `dia` is
+ * still yesterday, carrying only a handful of tail hours. Every current-hour reader assumes `dia[0]` is
+ * today and filters by bare hour-of-day, so a yesterday-evening hour (e.g. 20:00) whose number is still >=
+ * the current morning hour survives the filter and is read as "now" — pinning the hero to a slot that can
+ * carry a sky but no temperature, which blanked it to "--". Drop any day before the current calendar day so
+ * resolution always anchors on today; fall back to the raw list if that would leave nothing (a wholly stale
+ * feed), so behaviour is never worse than before.
+ */
+private fun futureDays(forecast: MunicipioHourly, zone: ZoneId, now: Instant): List<MunicipioHourly.Dia> {
+    val today = now.atZone(zone).toLocalDate()
+    val kept = forecast.prediccion.dia.dropWhile { dia ->
+        val date = parseLocalDate(dia.fecha) ?: return@dropWhile false
+        date < today
+    }
+    return kept.ifEmpty { forecast.prediccion.dia }
+}
 
 private data class Block(val start: Int, val end: Int, val value: Int)
 

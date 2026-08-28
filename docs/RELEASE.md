@@ -31,9 +31,20 @@ The app is registered on Play as `com.mab.Aura` (capital A, the install/store id
 
 Status: 1.1.0 was submitted and rejected on the government-information policy (the copy read as an official app). 1.1.1 is the corrected resubmission: every surface now names its open-data sources and carries the independent, non-affiliated disclaimer, plus the English UI and the widget framing fix. The listing copy, the data-safety answers and every App-content declaration are prepared in the gitignored `notes/play-listing.md`; the store image assets (icon, feature graphic, screenshots) are in `docs/store/`. The remaining work is the interactive Play Console clicks, which need my hands: upload the AAB to the internal track, update the store listing text, and correct the App content declarations so the app reads as independent.
 
-## Not yet optimized (R8)
+## R8 shrinking and obfuscation (on)
 
-The release build ships unshrunk (`isMinifyEnabled = false`), so Play's app-optimization score is Low. Enabling R8 shrinking + obfuscation is deferred deliberately (it needs keep rules and a full on-device verification pass, and it does not need the AGP 9 upgrade the Console suggests). Tracked in the local `specs/r8-optimization.md`; the durable note lands here once it ships.
+The release build runs R8 (`release { isMinifyEnabled = true; isShrinkResources = true }`), so the store build is shrunk, optimized and obfuscated. This roughly halved the artifact: the release APK went from 21.9 MB to 11.9 MB, the AAB from 21.6 MB to 15.3 MB. Debug builds stay unminified, so stack traces and the Compose tooling keep working. R8 runs on the pinned AGP 8.13.2; it never needed the AGP 9 upgrade the Console's optimization nudge conflates it with.
+
+Two things the keep rules in `app/proguard-rules.pro` protect, because R8 breakage only shows at runtime, not at build time:
+
+- **kotlinx.serialization.** The `@Serializable` types in `:core` back the on-disk JSON caches the app and the widget read. The rules keep each type's Companion and its generated `serializer()`, so obfuscation can't silently corrupt a saved snapshot. The library ships the same rules as consumer rules; they are pinned explicitly here because the persistent cache is the highest-risk surface.
+- **Missing-class `-dontwarn` for build-time-only annotations.** Apache Commons Compress references optional compression codecs Aura never uses (xz, zstd, brotli), and Tink (behind `androidx.security-crypto`, which encrypts the AEMET key) references Error Prone annotations that never ship at runtime. Both would otherwise fail R8's missing-class check. The Tink list is exactly what AGP generated in `build/.../missing_rules.txt`.
+
+Everything else Aura uses (Glance, WorkManager, DataStore, OkHttp) ships its own consumer rules, and the manifest entry points are kept by AGP automatically, so the rules file stays small. The `res/raw` assets (Lottie animations, the FNMT cert) are referenced by explicit `R.raw.*`/`@raw` ids and the hero art lives in `assets/` (which the resource shrinker never touches), so none of it needs a `keep.xml`.
+
+`mapping.txt` is produced at `app/build/outputs/mapping/release/mapping.txt` on every release build; upload it to Play (or keep it with the release) so crash stack traces de-obfuscate.
+
+Verified on the emulator from a signed release install: the app launches under obfuscation, the AEMET key saves and loads through the encrypted store, a live fetch deserializes and renders (hero summary, multi-day forecast, sun-path card, forecast bulletin, news feed), the hero art loads, and the English-chrome / Spanish-data localization boundary holds. A physical-device pass belongs to the next real release.
 
 ## Why there is no release skill yet
 

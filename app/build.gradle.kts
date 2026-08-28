@@ -50,7 +50,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 shrinks, optimizes and obfuscates the release build (Android's equivalent of turning on
+            // dead-code stripping + symbol renaming for a store build). isShrinkResources then drops any
+            // res/* entry R8 proves unreachable. Both are release-only: debug builds stay unminified so
+            // stack traces and the Compose tooling keep working. Keep rules for anything constructed by
+            // reflection or by name live in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

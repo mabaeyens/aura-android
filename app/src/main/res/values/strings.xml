@@ -219,6 +219,7 @@
     <string name="card_station_complete">Mide todos los datos de superficie.</string>
     <string name="card_station_missing">No mide: %1$s.</string>
     <string name="card_station_list_conjunction">%1$s y %2$s</string>
+    <string name="card_station_measured_at">a las %1$s</string>
     <string name="card_radar_title">Radar</string>
     <string name="card_radar_content_description">Radar de %1$s</string>
     <string name="card_radar_reflectivity">Reflectividad · alcance %1$d km</string>

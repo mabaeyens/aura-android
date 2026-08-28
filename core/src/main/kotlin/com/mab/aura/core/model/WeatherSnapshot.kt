@@ -178,13 +178,17 @@ data class WeatherSnapshot(
     }
 
     /**
-     * The honest "when measured" stamp for the station card, e.g. "a las 14:00", or null when the reading is
-     * from the current clock hour (a current-hour reading is "now" and needs no stamp). A reading from an
-     * earlier hour — including the same hour on a different day — is stamped, so a carried-forward reading
-     * always shows its real age. Formats [observedAt] in [zone] (civil time; Europe/Madrid by default). The
-     * "a las" label is Spanish, consistent with the rest of :core's generated text staying Spanish even on an
-     * English UI. iOS returns the raw Date and formats "a las HH:MM" in the view; this returns the finished
-     * string. Same rule on both: stamp iff the reading is not from the current clock hour.
+     * The "when measured" time for the station card, formatted as a locale-neutral 24-hour "HH:MM" (e.g.
+     * "14:00"), or null when the reading is from the current clock hour (a current-hour reading is "now" and
+     * needs no stamp). A reading from an earlier hour — including the same hour on a different day — returns a
+     * time, so a carried-forward reading always shows its real age. Formats [observedAt] in [zone] (civil
+     * time; Europe/Madrid by default).
+     *
+     * This returns only the time; the surrounding "a las %s" / "at %s" label is chrome and is localized in
+     * :app (`R.string.card_station_measured_at`), so an English device reads "at 14:00" and a Spanish one
+     * "a las 14:00". The time digits are the same in either language. iOS mirrors this split: its
+     * `observationDisplayTime` returns the raw time and the view supplies the localized prefix. Same rule on
+     * both platforms: a time is returned iff the reading is not from the current clock hour.
      */
     fun observationDisplayTime(
         now: Instant = Instant.now(),
@@ -194,7 +198,7 @@ data class WeatherSnapshot(
         // Same absolute clock hour → no stamp. Madrid's offset from UTC is a whole number of hours, so
         // truncating each instant to the hour lands on the same civil-hour boundary the user sees.
         if (at.truncatedTo(ChronoUnit.HOURS) == now.truncatedTo(ChronoUnit.HOURS)) return null
-        return "a las " + STAMP_FORMAT.format(at.atZone(zone))
+        return STAMP_FORMAT.format(at.atZone(zone))
     }
 
     /** The hero temperature from an already re-anchored [strip], so [resolved] and [heroTemp] share one rule. */

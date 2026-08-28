@@ -216,6 +216,7 @@
     <string name="card_station_complete">Measures all surface data.</string>
     <string name="card_station_missing">Does not measure: %1$s.</string>
     <string name="card_station_list_conjunction">%1$s and %2$s</string>
+    <string name="card_station_measured_at">at %1$s</string>
     <string name="card_radar_title">Radar</string>
     <string name="card_radar_content_description">%1$s radar</string>
     <string name="card_radar_reflectivity">Reflectivity · range %1$d km</string>

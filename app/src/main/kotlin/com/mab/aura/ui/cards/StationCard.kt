@@ -54,8 +54,11 @@ fun AuraStationCard(
     val available = snapshot.observedMetrics
     val reading = snapshot.observedReading
     val context = LocalContext.current
-    // "a las HH:MM" when the reading is from an earlier hour, null (no stamp) when it is the current hour.
-    val measuredAt = snapshot.observationDisplayTime(now)
+    // The measured-at time when the reading is from an earlier hour, null (no stamp) when it is the current
+    // hour. The "a las %s" / "at %s" prefix is chrome, localized here in :app; :core returns only the time.
+    val measuredAt = snapshot.observationDisplayTime(now)?.let {
+        context.getString(R.string.card_station_measured_at, it)
+    }
 
     AuraSection(stringResource(R.string.card_station_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {

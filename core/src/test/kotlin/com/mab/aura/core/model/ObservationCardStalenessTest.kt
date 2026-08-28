@@ -16,9 +16,10 @@ import java.time.ZoneId
  *  - [WeatherSnapshot.observationIsFresh]: the reading is within [StationObservation.OBSERVATION_MAX_AGE]
  *    (3 h) of now and not in the future. Boundary-locked with the iOS `observationIsFresh` vectors: exactly
  *    3 h is fresh (`<=`), 3 h + 1 min is stale, a future reading is never fresh.
- *  - [WeatherSnapshot.observationDisplayTime]: the "a las HH:MM" stamp, shown only when the reading is not
- *    from the current clock hour (a current-hour reading is "now" and needs no stamp); an earlier hour —
- *    including the same hour on a different day — is stamped.
+ *  - [WeatherSnapshot.observationDisplayTime]: the measured-at "HH:MM" time, returned only when the reading
+ *    is not from the current clock hour (a current-hour reading is "now" and needs no stamp); an earlier hour
+ *    — including the same hour on a different day — returns a time. The localized "a las %s" / "at %s" prefix
+ *    that wraps it is chrome and lives in :app, so it is not part of this :core value.
  *
  * UTC is injected so a reading's hour maps straight to the instant's UTC hour and the stamp is easy to read.
  * The bounded carry-forward (make() drops a reading once it ages past the gate) is pinned in
@@ -78,16 +79,17 @@ class ObservationCardStalenessTest {
     }
 
     @Test
-    fun displayTime_earlierHourIsStamped() {
+    fun displayTime_earlierHourReturnsTheTime() {
+        // Only the time; the localized "a las %s" / "at %s" prefix is added by the card in :app.
         val now = at("2024-01-15T14:23:00Z")
-        assertEquals("a las 13:00", withObservedAt(at("2024-01-15T13:00:00Z")).observationDisplayTime(now, utc))
+        assertEquals("13:00", withObservedAt(at("2024-01-15T13:00:00Z")).observationDisplayTime(now, utc))
     }
 
     @Test
-    fun displayTime_sameHourDifferentDayIsStamped() {
-        // Yesterday at the same wall-clock hour is a different absolute hour, so it still stamps.
+    fun displayTime_sameHourDifferentDayReturnsTheTime() {
+        // Yesterday at the same wall-clock hour is a different absolute hour, so it still returns a time.
         val now = at("2024-01-15T14:23:00Z")
-        assertEquals("a las 14:00", withObservedAt(at("2024-01-14T14:00:00Z")).observationDisplayTime(now, utc))
+        assertEquals("14:00", withObservedAt(at("2024-01-14T14:00:00Z")).observationDisplayTime(now, utc))
     }
 
     @Test

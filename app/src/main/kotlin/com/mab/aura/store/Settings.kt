@@ -97,6 +97,25 @@ class Settings(context: Context) {
         }
     }
 
+    /**
+     * The publish time (AEMET's "Última actualización") from the observation RSS notifier at the last
+     * successful keyed observation fetch. The refresh path re-fetches only when the RSS marker has advanced
+     * past this stored value (see [com.mab.aura.data.observationDueFromMarker]). This is a DIFFERENT clock from
+     * [lastObservationFint]: the publish time (~30 min past the hour) drives fetch cadence, compared
+     * RSS-to-RSS; the `fint` (top of the hour) drives the display gate and the RSS-unreachable TTL fallback.
+     * They are deliberately two fields so neither is compared against the other. Null until the first fetch.
+     */
+    val lastObservationPublished: Flow<Instant?> = store.data.map { prefs ->
+        prefs[LAST_OBSERVATION_PUBLISHED]?.let { Instant.ofEpochMilli(it) }
+    }
+
+    suspend fun setLastObservationPublished(value: Instant?) {
+        store.edit { prefs ->
+            if (value == null) prefs.remove(LAST_OBSERVATION_PUBLISHED)
+            else prefs[LAST_OBSERVATION_PUBLISHED] = value.toEpochMilli()
+        }
+    }
+
     private fun decodeFavourites(raw: String): List<Location> =
         runCatching { json.decodeFromString<List<Location>>(raw) }.getOrDefault(emptyList())
 
@@ -106,6 +125,7 @@ class Settings(context: Context) {
         val USE_24H = booleanPreferencesKey("use_24h")
         val HERO_FAMILY = stringPreferencesKey("hero_family")
         val LAST_OBSERVATION_FINT = longPreferencesKey("last_observation_fint")
+        val LAST_OBSERVATION_PUBLISHED = longPreferencesKey("last_observation_published")
 
         val json = Json { ignoreUnknownKeys = true }
     }

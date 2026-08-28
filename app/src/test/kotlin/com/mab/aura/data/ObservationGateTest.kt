@@ -49,4 +49,42 @@ class ObservationGateTest {
         // And it never gets stuck: once the clock is past the anchor's own +90-min window it fetches again.
         assertTrue(observationDue(anchor = badFuture, now = Instant.parse("2026-08-21T13:00:00Z"), force = false))
     }
+
+    // --- observationDueFromMarker: the RSS-publish-marker gate, with the TTL as the unreachable fallback ---
+
+    // The RSS publish marker sits ~30 min past the hour, a different clock from the fint above.
+    private val published = Instant.parse("2026-08-21T10:31:00Z")
+
+    @Test
+    fun marker_forceAlwaysFetches() {
+        // Force ignores every marker, exactly like the fint gate.
+        assertTrue(observationDueFromMarker(storedPublished = published, rssMarker = null, storedFint = fint, now = fint, force = true))
+    }
+
+    @Test
+    fun marker_advancedPublishTimeFetches() {
+        // A new hour has published (11:31 > the stored 10:31), so the keyed feed is due.
+        val newer = Instant.parse("2026-08-21T11:31:00Z")
+        assertTrue(observationDueFromMarker(storedPublished = published, rssMarker = newer, storedFint = fint, now = newer, force = false))
+    }
+
+    @Test
+    fun marker_unchangedPublishTimeSkips() {
+        // AEMET has published nothing new since the last fetch, so zero keyed calls — even a bit later in the hour.
+        val now = Instant.parse("2026-08-21T10:55:00Z")
+        assertFalse(observationDueFromMarker(storedPublished = published, rssMarker = published, storedFint = fint, now = now, force = false))
+    }
+
+    @Test
+    fun marker_firstEverFetchWhenNothingStored() {
+        // No stored publish marker yet: fetch and record it.
+        assertTrue(observationDueFromMarker(storedPublished = null, rssMarker = published, storedFint = null, now = published, force = false))
+    }
+
+    @Test
+    fun marker_unreachableRssFallsBackToTheFintTtl() {
+        // RSS marker null (feed down). Within the fint TTL it skips; past it, it fetches — the old behaviour.
+        assertFalse(observationDueFromMarker(storedPublished = published, rssMarker = null, storedFint = fint, now = Instant.parse("2026-08-21T10:35:00Z"), force = false))
+        assertTrue(observationDueFromMarker(storedPublished = published, rssMarker = null, storedFint = fint, now = Instant.parse("2026-08-21T11:31:00Z"), force = false))
+    }
 }

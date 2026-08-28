@@ -144,17 +144,29 @@ class WeatherRepository(context: Context) {
         // resolved per location to the nearest recent station below. A failure just leaves the station card
         // (and the observed temperature) hidden.
         //
-        // That national product updates once per hour, so gate the call on the stored measurement time
-        // ([observationDue]): a refresh triggered by any location crossing the 1-hour write-time gate must
-        // not re-download a reading that hasn't changed yet. When we skip, each location carries its last
-        // good station reading forward via [WeatherSnapshot.make]'s previousObserved, so the observed card
-        // holds rather than blanking. Persist the freshest record's time after a successful fetch. Scope is
-        // observations only; the forecast, UV and avisos keep their own cadence (a warning is never
-        // stale-cached). Ported from AEMETService.swift's observation clock.
-        val observations = if (observationDue(settings.lastObservationFint.first(), now, force)) {
+        // That national product updates once per hour, so gate the keyed call on AEMET's own publish marker
+        // instead of a fixed timer: a cheap keyless RSS notifier ([AemetClient.observacionRssUpdated]) says
+        // when AEMET last refreshed the dataset, and the keyed download fires only when that marker has
+        // advanced past the one stored from the last fetch ([observationDueFromMarker]). When the RSS is
+        // unreachable, fall back to the old fint-based TTL heuristic so the cadence degrades, never breaks.
+        // When we skip, each location carries its last good station reading forward via [WeatherSnapshot.make]'s
+        // previousObserved, so the observed card holds rather than blanking. Scope is observations only; the
+        // forecast, UV and avisos keep their own cadence (a warning is never stale-cached).
+        val rssMarker = if (force) null else runCatching { client.observacionRssUpdated() }.getOrElse { note(it); null }
+        val observations = if (observationDueFromMarker(
+                storedPublished = settings.lastObservationPublished.first(),
+                rssMarker = rssMarker,
+                storedFint = settings.lastObservationFint.first(),
+                now = now,
+                force = force,
+            )
+        ) {
             runCatching { client.observacionTodas() }
                 .onSuccess { obs ->
+                    // Persist both markers for the next cycle: the freshest fint (display gate + TTL fallback)
+                    // and, when we had one, the RSS publish time (fetch cadence). They are different clocks.
                     obs.mapNotNull { it.timestamp }.maxOrNull()?.let { settings.setLastObservationFint(it) }
+                    rssMarker?.let { settings.setLastObservationPublished(it) }
                 }
                 .getOrElse { note(it); emptyList() }
         } else {
@@ -310,4 +322,32 @@ internal fun observationDue(anchor: Instant?, now: Instant, force: Boolean): Boo
     if (force || anchor == null) return true
     val clamped = if (anchor.isAfter(now)) now else anchor
     return !now.isBefore(clamped.plusMillis(OBSERVATION_TTL_MILLIS))
+}
+
+/**
+ * Whether the national observation feed is due, decided by AEMET's own publish marker rather than a timer.
+ * [rssMarker] is the newest publish time read from the keyless observation RSS this cycle (null when the RSS
+ * was unreachable or unparseable, or when skipped on a [force] pass); [storedPublished] is the marker from the
+ * last successful keyed fetch. A [force] refresh always fetches. Otherwise, when the RSS marker is available,
+ * fetch only when it has advanced past [storedPublished] (a null stored marker — first ever fetch — fetches),
+ * so a cycle where AEMET has published nothing new makes zero keyed calls. When the RSS is unreachable, fall
+ * back to the fint-based TTL heuristic ([observationDue] on [storedFint]) so the gate degrades gracefully.
+ *
+ * [storedPublished] and [storedFint] are two different clocks (publish time ~30 min past the hour vs the
+ * observation `fint` at the top of the hour) and are never compared against each other; the marker path uses
+ * only the former, the fallback only the latter. Pure so it is unit-tested directly.
+ */
+internal fun observationDueFromMarker(
+    storedPublished: Instant?,
+    rssMarker: Instant?,
+    storedFint: Instant?,
+    now: Instant,
+    force: Boolean,
+): Boolean {
+    if (force) return true
+    return if (rssMarker != null) {
+        storedPublished == null || rssMarker.isAfter(storedPublished)
+    } else {
+        observationDue(storedFint, now, force = false)
+    }
 }

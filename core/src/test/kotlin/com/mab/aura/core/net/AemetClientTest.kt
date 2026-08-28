@@ -9,8 +9,10 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import java.io.ByteArrayOutputStream
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import java.time.Instant
 import org.junit.Before
 import org.junit.Test
 
@@ -167,6 +169,33 @@ class AemetClientTest {
         assertEquals("772201", alerts.first().zona)
         assertEquals("Lluvias", alerts.first().phenomenon)
         assertTrue(server.takeRequest().path!!.startsWith("/opendata/api/avisos_cap/ultimoelaborado/area/72"))
+    }
+
+    @Test
+    fun observacionRssUpdated_makesOneKeylessGetAndParsesTheMarker() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """<?xml version="1.0" encoding="UTF-8"?>""" +
+                    """<rss version="2.0"><channel><item><description>""" +
+                    """{"Última actualización": "2026-08-28T11:31:59+0200"}""" +
+                    """</description></item></channel></rss>""",
+            ),
+        )
+        val client = AemetClient(
+            apiKey = "KEY",
+            baseUrl = server.url("/opendata/api").toString(),
+            observacionRssUrl = server.url("/rss/obs.xml").toString(),
+            pacer = RequestPacer(limit = 1000),
+            retryBackoffMillis = { 0 },
+        )
+
+        // 11:31:59 +0200 == 09:31:59 UTC.
+        assertEquals(Instant.parse("2026-08-28T09:31:59Z"), client.observacionRssUpdated())
+        // One GET straight to the RSS URL: no two-call envelope, and no api_key on a keyless notifier.
+        assertEquals(1, server.requestCount)
+        val request = server.takeRequest()
+        assertEquals("/rss/obs.xml", request.path)
+        assertFalse(request.path!!.contains("api_key"))
     }
 
     private fun tarOf(vararg entries: Pair<String, ByteArray>): ByteArray {

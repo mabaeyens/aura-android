@@ -19,6 +19,7 @@ import okhttp3.Request
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
+import java.time.Instant
 import kotlin.math.pow
 
 /** The typed errors [AemetClient] can throw. Swift models this as a single `ClientError` enum. */
@@ -54,6 +55,9 @@ sealed class AemetClientException(message: String) : Exception(message) {
 class AemetClient(
     private val apiKey: String,
     private val baseUrl: String = DEFAULT_BASE,
+    // The keyless observation RSS notifier (a full absolute URL on a different host path from [baseUrl], so it
+    // is not built through the two-call API engine). Overridable so tests can point it at a mock server.
+    private val observacionRssUrl: String = OBSERVACION_RSS_URL,
     private val httpClient: OkHttpClient = OkHttpClient(),
     private val pacer: RequestPacer = RequestPacer.shared,
     private val json: Json = Json { ignoreUnknownKeys = true },
@@ -63,6 +67,13 @@ class AemetClient(
 ) {
     companion object {
         const val DEFAULT_BASE = "https://opendata.aemet.es/opendata/api"
+
+        /**
+         * AEMET's keyless observation RSS. A plain static-host GET (no api_key, no envelope), served from
+         * `/rss/`, not the `/opendata/api` product base. See [observacionRssUpdated].
+         */
+        const val OBSERVACION_RSS_URL =
+            "https://opendata.aemet.es/rss/obsconv_hh_opendata_todos_RSS.xml"
     }
 
     /** The envelope returned by every first call. */
@@ -214,6 +225,18 @@ class AemetClient(
      */
     suspend fun observacionTodas(): List<StationObservation> =
         fetch("/observacion/convencional/todas", ListSerializer(StationObservation.serializer()))
+
+    /**
+     * When AEMET last refreshed the conventional-observation dataset, from the keyless RSS notifier
+     * ([OBSERVACION_RSS_URL]), or null when the feed is unreachable or unparseable. A single keyless GET (no
+     * api_key, no two-call envelope), so the refresh path can decide whether [observacionTodas] is worth
+     * calling without spending a keyed request to find out. It still funnels through [perform], so it gets the
+     * same 429 backoff and, conservatively, counts against the shared pacer — one cheap keyless GET that, when
+     * the marker has not advanced, saves the far larger keyed observation download. The returned value is a
+     * publish time (~30 min past the hour), a different clock from the observation `fint`; never compare them.
+     */
+    suspend fun observacionRssUpdated(): Instant? =
+        ObservationRss.latestUpdate(perform(observacionRssUrl.toHttpUrl()))
 
     /**
      * The latest regional radar image (a ~240 km-radius reflectivity frame). Raw image bytes (GIF/PNG); pick

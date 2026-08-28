@@ -26,6 +26,7 @@ object WeatherRefreshScheduler {
 
     private const val WORK_NAME = "aura-weather-refresh"
     private const val THIN_RETRY_WORK = "aura-weather-thin-retry"
+    private const val WIDGET_KICK_WORK = "aura-weather-widget-kick"
 
     /** Input flag telling [RefreshWorker] to force past the 1-hour freshness gate (used by the thin retry, so
      *  the just-written thin snapshot doesn't short-circuit its own retry). */
@@ -44,6 +45,35 @@ object WeatherRefreshScheduler {
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
+            request,
+        )
+    }
+
+    /**
+     * A one-shot "refresh now", used when a widget is first placed (see [com.mab.aura.widget.AuraWidgetReceiver]).
+     * A freshly placed tile would otherwise sit on the empty state or a stale cache until either the next app
+     * open or the next ~3 h periodic pass, since the app schedules the periodic work only in `MainActivity`.
+     *
+     * Deliberately *not* forced: it goes through [RefreshWorker], which obeys the repository's 1-hour freshness
+     * gate, so placing a tile moments after the app already refreshed makes zero network calls (it just re-reads
+     * the current cache). Unique with KEEP so several tiles placed together, or a placement plus a resize, all
+     * coalesce into one request rather than firing a fetch each. Network-constrained; a transient failure backs
+     * off exactly like the periodic worker. If there is no key or no favourites yet, the worker succeeds quietly
+     * and the tile keeps its empty state.
+     */
+    fun refreshNow(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = OneTimeWorkRequestBuilder<RefreshWorker>()
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            WIDGET_KICK_WORK,
+            ExistingWorkPolicy.KEEP,
             request,
         )
     }

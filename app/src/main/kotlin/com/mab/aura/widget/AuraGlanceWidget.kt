@@ -47,8 +47,11 @@ import com.mab.aura.R
 import com.mab.aura.core.hero.HeroBackground
 import com.mab.aura.core.icon.WeatherIcon
 import com.mab.aura.core.model.HourSlot
+import com.mab.aura.core.model.SnapshotFreshness
 import com.mab.aura.core.model.WeatherAlert
 import com.mab.aura.core.model.WeatherSnapshot
+import com.mab.aura.core.model.freshness
+import com.mab.aura.core.model.stalenessLabel
 import com.mab.aura.store.Settings
 import com.mab.aura.ui.drawableFor
 import com.mab.aura.ui.theme.Palette
@@ -177,14 +180,25 @@ private fun FilledContent(snapshot: WeatherSnapshot, now: Instant) {
     val medium = size.width >= 220.dp && size.height >= 120.dp
     val alert = snapshot.activeAlert(now)
 
+    // Honest freshness: a tile within the app's 1-hour gate stays unmarked (label null, layout unchanged from
+    // today); older than that it gains a dim footer note. `hard` is the past-24h case, where display-time
+    // resolution can no longer keep the hero on today, so the note escalates from "actualizado HH:mm" to
+    // "Desactualizado". Read off the resolved snapshot; copy() preserves `updated`, so the stamp is intact.
+    val staleLabel = snapshot.stalenessLabel(now)
+    val hardStale = snapshot.freshness(now) == SnapshotFreshness.STALE
+
     Column(modifier = GlanceModifier.fillMaxSize().padding(14.dp)) {
         LocationRow(snapshot.localidad, alert)
         Spacer(GlanceModifier.height(6.dp))
         if (medium) {
             // Block left, four-hour strip right (a fifth column crowds this width, as on iOS). The block sits
             // at the top under the location row; the strip is centred vertically in the tile so it reads as
-            // its own band down the middle rather than clinging to the top edge.
-            Row(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
+            // its own band down the middle rather than clinging to the top edge. When a staleness note is
+            // present the Row yields the bottom line to it (weight instead of fillMaxSize); a fresh tile keeps
+            // the original fillMaxSize so its layout is byte-identical to before.
+            val bandModifier =
+                if (staleLabel != null) GlanceModifier.fillMaxWidth().defaultWeight() else GlanceModifier.fillMaxSize()
+            Row(modifier = bandModifier, verticalAlignment = Alignment.Top) {
                 ConditionBlock(snapshot, now, medium = true)
                 Spacer(GlanceModifier.width(10.dp))
                 Box(
@@ -198,6 +212,7 @@ private fun FilledContent(snapshot: WeatherSnapshot, now: Instant) {
                     }
                 }
             }
+            if (staleLabel != null) StalenessNote(staleLabel, hardStale)
         } else {
             // Compact (narrow) tile. The block sits low like the iOS small widget; a four-hour strip is added
             // beneath it only when the tile is tall enough to carry it at the same readable font the wide tile
@@ -216,8 +231,28 @@ private fun FilledContent(snapshot: WeatherSnapshot, now: Instant) {
                 }
                 Spacer(GlanceModifier.defaultWeight())
             }
+            // The footer note (only when not fresh) sits at the very bottom, after the centring spacer so it
+            // pins to the edge rather than joining the centred group.
+            if (staleLabel != null) StalenessNote(staleLabel, hardStale)
         }
     }
+}
+
+/** The dim freshness footer — the iOS `AuraStalenessNote`. Renders only when the snapshot is no longer fresh,
+ *  so a current tile is unmarked. "actualizado HH:mm" while recent (fainter), "Desactualizado" once hard-stale
+ *  (a touch stronger so the honest signal draws the eye). Hierarchy is weight and opacity, never a tint. */
+@Composable
+private fun StalenessNote(label: String, hard: Boolean) {
+    Spacer(GlanceModifier.height(4.dp))
+    Text(
+        text = label,
+        style = TextStyle(
+            color = if (hard) WhiteDim else WhiteFaint,
+            fontSize = 11.sp,
+            fontWeight = if (hard) FontWeight.Medium else FontWeight.Normal,
+        ),
+        maxLines = 1,
+    )
 }
 
 /** The place name behind a location pin, with the aviso pill pushed to the trailing edge when a warning is

@@ -223,8 +223,11 @@ class WeatherSnapshotFactoryTest {
 
     @Test
     fun make_skippedObservationCarriesForwardPreviousReading() {
+        // fint sits 30 min before `now` (09:30Z), so the reading is within OBSERVATION_MAX_AGE (3 h) and the
+        // bounded carry-forward keeps it. A future or >3 h-old reading would be blanked instead — see
+        // ObservationCardStalenessTest for those boundaries.
         val observed = StationObservation(idema = "3195", ubi = "MADRID RETIRO",
-            lat = 40.41, lon = -3.68, ta = 21.4, hr = 50.0, fint = "2026-08-21T11:00:00+0000")
+            lat = 40.41, lon = -3.68, ta = 21.4, hr = 50.0, fint = "2026-08-21T09:00:00+0000")
         val previous = WeatherSnapshot.make(location, daily(), hourly = null,
             observed = observed, zone = madrid, now = now)
         assertEquals(21, previous.observedTemp)
@@ -267,6 +270,43 @@ class WeatherSnapshotFactoryTest {
         assertNull(rebuilt.observedStation)
         assertNull(rebuilt.observedReading)
         assertEquals(ObservedMetrics(), rebuilt.observedMetrics)
+    }
+
+    // The carry-forward is bounded by the age gate (OBSERVATION_MAX_AGE, 3 h): a prior reading that has aged
+    // past it is dropped, not carried, so a fetch-less refresh can never resurrect a stale measurement. This
+    // is the make()-time half of the gate; the card also re-checks at display time (ObservationCardStalenessTest).
+    @Test
+    fun make_staleObservationIsNotCarriedForward() {
+        // 3.5 h before `now` (09:30Z) — past the 3 h gate.
+        val previous = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = StationObservation(idema = "3195", ubi = "MADRID RETIRO",
+                lat = 40.41, lon = -3.68, ta = 21.4, fint = "2026-08-21T06:00:00+0000"),
+            zone = madrid, now = now)
+        assertEquals(21, previous.observedTemp)   // the fresh fetch that built `previous` trusted it
+
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = previous, zone = madrid, now = now)
+
+        assertNull(rebuilt.observedTemp)
+        assertNull(rebuilt.observedStation)
+        assertNull(rebuilt.observedReading)
+        assertNull(rebuilt.observedAt)
+        assertEquals(ObservedMetrics(), rebuilt.observedMetrics)
+    }
+
+    @Test
+    fun make_futureObservationIsNotCarriedForward() {
+        // A clock-skewed future reading (11:00Z vs 09:30Z now) is never fresh, so it is dropped, not carried.
+        val previous = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = StationObservation(idema = "3195", ubi = "MADRID RETIRO",
+                lat = 40.41, lon = -3.68, ta = 21.4, fint = "2026-08-21T11:00:00+0000"),
+            zone = madrid, now = now)
+
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = previous, zone = madrid, now = now)
+
+        assertNull(rebuilt.observedTemp)
+        assertNull(rebuilt.observedAt)
     }
 
     @Test

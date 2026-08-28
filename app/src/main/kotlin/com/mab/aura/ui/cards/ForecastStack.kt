@@ -99,10 +99,12 @@ fun AuraForecastStack(
                 AuraSunArcCard(snapshot = snapshot, size = size, now = now)
             }
             AuraWindCard(snapshot = snapshot, size = size)
-            // The observation-station card sits right after the wind rose, only when a station resolved
-            // (matching iOS's phone-only placement). observedStation carries the resolved station's name.
-            if (snapshot.observedStation != null) {
-                AuraStationCard(snapshot = snapshot, size = size)
+            // The observation-station card sits right after the wind rose, only when a station resolved AND its
+            // reading is still fresh (matching iOS's phone-only placement). observedStation carries the resolved
+            // station's name; observationIsFresh(now) hides the card once the reading ages past 3 h, re-checked
+            // against the live clock so a carried reading self-expires with no fetch (same gate as the hero).
+            if (snapshot.observedStation != null && snapshot.observationIsFresh(now)) {
+                AuraStationCard(snapshot = snapshot, size = size, now = now)
             }
             snapshot.airQuality?.let { AuraAirQualityCard(airQuality = it, size = size) }
             snapshot.uvIndex?.let { uv ->

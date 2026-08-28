@@ -29,6 +29,7 @@ import com.mab.aura.R
 import com.mab.aura.core.model.ObservedMetrics
 import com.mab.aura.core.model.ObservedReading
 import com.mab.aura.core.model.WeatherSnapshot
+import java.time.Instant
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -47,17 +48,20 @@ import kotlin.math.roundToInt
 fun AuraStationCard(
     snapshot: WeatherSnapshot,
     size: AuraSize,
+    now: Instant = Instant.now(),
     modifier: Modifier = Modifier,
 ) {
     val available = snapshot.observedMetrics
     val reading = snapshot.observedReading
     val context = LocalContext.current
+    // "a las HH:MM" when the reading is from an earlier hour, null (no stamp) when it is the current hour.
+    val measuredAt = snapshot.observationDisplayTime(now)
 
     AuraSection(stringResource(R.string.card_station_title).uppercase(), size, modifier = modifier) {
         AuraCard(size) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = header(snapshot, context),
+                    text = header(snapshot, context) + (measuredAt?.let { " · $it" } ?: ""),
                     fontSize = size.bodySize - 1,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,

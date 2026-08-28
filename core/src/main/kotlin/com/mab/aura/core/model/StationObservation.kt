@@ -126,6 +126,15 @@ data class StationObservation(
          */
         const val NEAREST_STATION_KM: Double = 20.0
 
+        /**
+         * How old a station reading may be and still be trusted, as one named duration. It is the single
+         * source of truth for the 3-hour age used in two places that must never drift apart: [nearest]'s
+         * selection filter (which station may represent a location) and the display-time card gate
+         * ([WeatherSnapshot.observationIsFresh], which hides a stale reading and bounds the carry-forward).
+         * Kept identical to iOS `observationMaxAge`.
+         */
+        val OBSERVATION_MAX_AGE: Duration = Duration.ofHours(3)
+
         // AEMET stamps observations like "2026-08-19T15:00:00+0000"; the `Z` letter parses the "+0000".
         private val FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US)
@@ -141,7 +150,7 @@ data class StationObservation(
             longitude: Double,
             observations: List<StationObservation>,
             now: Instant = Instant.now(),
-            maxAge: Duration = Duration.ofHours(3),
+            maxAge: Duration = OBSERVATION_MAX_AGE,
             maxDistanceKm: Double = NEAREST_STATION_KM,
         ): StationObservation? {
             // Keep only each station's freshest reading that actually carries a temperature and coordinates.

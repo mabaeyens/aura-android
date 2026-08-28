@@ -85,13 +85,21 @@ fun WeatherSnapshot.Companion.make(
     // yet, or a transient error left [observed] null), keep the last good station reading from the prior
     // snapshot rather than blanking the observed card. All-or-nothing per station, so a fresh reading's
     // fields never mix with a stale one's. Ported from WeatherSnapshot.swift's `previousObserved` path.
+    //
+    // The carry-forward is bounded: hold the prior reading only while it is still within the age gate
+    // ([WeatherSnapshot.observationIsFresh] at this build's [now], the same OBSERVATION_MAX_AGE the card and
+    // the station selector use), otherwise blank every observed field. Without this bound a reading could be
+    // carried indefinitely across fetch-less refreshes. The card also re-checks freshness at display time, so
+    // a reading that ages past the gate between fetches self-expires even without a rebuild; this bound just
+    // stops the stale value from being persisted forward in the first place.
     val obsTemp: Int?
     val obsStation: String?
     val obsDistance: Double?
     val obsMetrics: ObservedMetrics
     val obsReading: ObservedReading?
-    // The reading's own measurement time (AEMET `fint`), carried so the display-time gate ([observedLeadsHero])
-    // can decide whether the observation is fresh enough to lead the hero. All-or-nothing with the fields above.
+    // The reading's own measurement time (AEMET `fint`), carried so the display-time gates
+    // ([WeatherSnapshot.observedLeadsHero], [WeatherSnapshot.observationIsFresh]) can decide whether the
+    // observation is fresh enough to lead the hero and to show its card. All-or-nothing with the fields above.
     val obsAt: Instant?
     if (observed != null) {
         obsTemp = observed.temperature
@@ -100,13 +108,22 @@ fun WeatherSnapshot.Companion.make(
         obsMetrics = observed.availableMetrics
         obsReading = observed.reading
         obsAt = observed.timestamp
+    } else if (previousObserved?.observationIsFresh(now) == true) {
+        obsTemp = previousObserved.observedTemp
+        obsStation = previousObserved.observedStation
+        obsDistance = previousObserved.observedStationDistanceKm
+        obsMetrics = previousObserved.observedMetrics
+        obsReading = previousObserved.observedReading
+        obsAt = previousObserved.observedAt
     } else {
-        obsTemp = previousObserved?.observedTemp
-        obsStation = previousObserved?.observedStation
-        obsDistance = previousObserved?.observedStationDistanceKm
-        obsMetrics = previousObserved?.observedMetrics ?: ObservedMetrics()
-        obsReading = previousObserved?.observedReading
-        obsAt = previousObserved?.observedAt
+        // No new reading and nothing fresh enough to carry: blank the observed card rather than show a
+        // measurement that has aged past OBSERVATION_MAX_AGE.
+        obsTemp = null
+        obsStation = null
+        obsDistance = null
+        obsMetrics = ObservedMetrics()
+        obsReading = null
+        obsAt = null
     }
 
     return WeatherSnapshot(

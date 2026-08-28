@@ -6,9 +6,12 @@ import com.mab.aura.core.sky.AuraSunPath
 import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.core.wind.WindDirection
 import kotlinx.serialization.Serializable
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /**
  * The small, self-contained bundle of weather one location needs to render. The app (the fetch hub)
@@ -154,6 +157,44 @@ data class WeatherSnapshot(
     fun observedLeadsHero(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): Boolean {
         val forecast = upcomingHours(now, zone).firstOrNull { it.temp != null }
         return observationLeads(now, forecastHourStart(forecast, now, zone), forecast?.temp)
+    }
+
+    /**
+     * Whether the station observation is recent enough to show its card at all: [observedAt] is known, not in
+     * the future, and no older than [StationObservation.OBSERVATION_MAX_AGE] (3 h). This is the card's own
+     * age gate, separate from [observedLeadsHero] (which decides whether the observation leads the *hero*
+     * temperature): a reading can be too old to lead the hero yet still fresh enough to show on its card, or
+     * too old for both. Pure time math, so unlike the other display helpers it takes no [zone]. The check runs
+     * against the live [now] at display time, so a reading carried forward with no new fetch self-expires the
+     * moment it crosses the 3 h line. No [ZoneId] is needed. Kept identical to the iOS `observationIsFresh`.
+     */
+    fun observationIsFresh(now: Instant = Instant.now()): Boolean {
+        val at = observedAt ?: return false
+        // A future measurement time (clock skew) is never fresh — mirrors iOS's `fint <= now` guard, which
+        // also makes the age below non-negative, so no `.abs()` is needed here (nearest() uses abs because it
+        // does not reject the future separately).
+        if (at.isAfter(now)) return false
+        return Duration.between(at, now) <= StationObservation.OBSERVATION_MAX_AGE
+    }
+
+    /**
+     * The honest "when measured" stamp for the station card, e.g. "a las 14:00", or null when the reading is
+     * from the current clock hour (a current-hour reading is "now" and needs no stamp). A reading from an
+     * earlier hour — including the same hour on a different day — is stamped, so a carried-forward reading
+     * always shows its real age. Formats [observedAt] in [zone] (civil time; Europe/Madrid by default). The
+     * "a las" label is Spanish, consistent with the rest of :core's generated text staying Spanish even on an
+     * English UI. iOS returns the raw Date and formats "a las HH:MM" in the view; this returns the finished
+     * string. Same rule on both: stamp iff the reading is not from the current clock hour.
+     */
+    fun observationDisplayTime(
+        now: Instant = Instant.now(),
+        zone: ZoneId = ZoneId.of("Europe/Madrid"),
+    ): String? {
+        val at = observedAt ?: return null
+        // Same absolute clock hour → no stamp. Madrid's offset from UTC is a whole number of hours, so
+        // truncating each instant to the hour lands on the same civil-hour boundary the user sees.
+        if (at.truncatedTo(ChronoUnit.HOURS) == now.truncatedTo(ChronoUnit.HOURS)) return null
+        return "a las " + STAMP_FORMAT.format(at.atZone(zone))
     }
 
     /** The hero temperature from an already re-anchored [strip], so [resolved] and [heroTemp] share one rule. */
@@ -339,7 +380,10 @@ data class WeatherSnapshot(
      * `WeatherSnapshotFactory.kt` (Swift keeps them as a `static` `extension` on the same type). Kept empty
      * here so those `WeatherSnapshot.Companion.xxx` extensions have a companion to attach to.
      */
-    companion object
+    companion object {
+        /** 24-hour clock for the station card's "a las HH:mm" measured-at stamp (see [observationDisplayTime]). */
+        private val STAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+    }
 }
 
 /**

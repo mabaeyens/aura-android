@@ -268,6 +268,32 @@ class WeatherSnapshotFactoryTest {
         assertTrue(rebuilt.hasCurrentHourData)                 // carried data must not read as thin
     }
 
+    // The strip itself must carry forward too, not just the current-hour scalars. Before this the hourly card
+    // blanked on a transient miss, and once the hero resolved from the strip it removed the very data
+    // heroTemp(now) re-anchors from. The carried slots keep their absolute timestamps.
+    @Test
+    fun make_hourlyFailureCarriesForwardTheStrip() {
+        val previous = WeatherSnapshot.make(location, daily(), hourly(), zone = madrid, now = now)
+        assertTrue(previous.hours.isNotEmpty())
+
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = previous, zone = madrid, now = now)
+
+        assertEquals(previous.hours, rebuilt.hours)            // the whole strip is held, not emptied
+        assertEquals(previous.heroTemp(now, madrid), rebuilt.heroTemp(now, madrid))  // hero still resolves from it
+    }
+
+    // A true cold start (no prior snapshot) with no hourly feed stays honestly thin: nothing to carry, an
+    // empty strip. This is the one case that legitimately renders "--", corrected by a forced retry, not carry.
+    @Test
+    fun make_hourlyFailureWithoutPreviousLeavesStripEmpty() {
+        val rebuilt = WeatherSnapshot.make(location, daily(), hourly = null,
+            observed = null, previousObserved = null, zone = madrid, now = now)
+
+        assertTrue(rebuilt.hours.isEmpty())
+        assertFalse(rebuilt.hasCurrentHourData)
+    }
+
     @Test
     fun make_freshHourlyWinsOverCarry() {
         val fresh = WeatherSnapshot.make(location, daily(), hourly(), zone = madrid, now = now)

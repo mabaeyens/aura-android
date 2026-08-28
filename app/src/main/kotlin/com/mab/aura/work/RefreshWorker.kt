@@ -32,9 +32,21 @@ class RefreshWorker(
         val repository = WeatherRepository(applicationContext)
         if (!repository.hasApiKey()) return Result.success()
 
+        // Set only by the thin-retry request (see [WeatherRefreshScheduler.scheduleThinRetry]): force past the
+        // 1-hour gate, since the snapshot we're retrying was just written and is younger than an hour.
+        val force = inputData.getBoolean(WeatherRefreshScheduler.KEY_FORCE, false)
+
         return try {
-            repository.refresh(favourites)
-            Result.success()
+            repository.refresh(favourites, force = force)
+            // On a forced thin-retry, if any favourite still lacks current-hour data the feed is still degraded:
+            // ask WorkManager to back off and try again, rather than leaving a thin widget until the next
+            // periodic run. The ordinary periodic pass never does this — a thin result there just waits out the
+            // normal cadence and the app's own retry, so a healthy widget isn't churned on every cycle.
+            if (force && favourites.any { repository.cachedSnapshot(it.ine)?.hasCurrentHourData != true }) {
+                Result.retry()
+            } else {
+                Result.success()
+            }
         } catch (e: Exception) {
             // A transient network/AEMET failure: let WorkManager back off and try again, keeping the last
             // good cache on the widget in the meantime.

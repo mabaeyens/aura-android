@@ -48,6 +48,11 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow<HoyUiState>(HoyUiState.Loading)
     val state: StateFlow<HoyUiState> = _state.asStateFlow()
 
+    /** Whether a manual pull-to-refresh is in flight, so the screen can show the pull spinner without
+     *  flipping the whole screen to the full loading state. */
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     /** Which hero-art family paints the sky, following the stored setting live so a change in Ajustes shows
      *  on return. Decoded from the `Settings` string; defaults to landscape, matching iOS. */
     val heroFamily: StateFlow<HeroBackground.Family> = settings.heroFamily
@@ -105,6 +110,35 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
             // public RSS; radar goes through AEMET but on its own 10-min cadence). Each fills its card in when it
             // arrives; a failure just leaves that card absent. They must never block or fail the forecast above.
             if (fresh != null) loadExtras(location)
+        }
+    }
+
+    /**
+     * Manual pull-to-refresh. Unlike [load] it forces the fetch past the 1-hour freshness gate and keeps the
+     * current content on screen (with a small pull spinner via [isRefreshing]) instead of flashing the full
+     * loading state. This is the escape hatch from a thin cache: without it a cold-start thin snapshot would
+     * pin the screen to "--" until the gate expires. Needs a key and a resolvable location, like [load].
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            if (!repository.hasApiKey()) {
+                _state.value = HoyUiState.NeedsApiKey
+                return@launch
+            }
+            _isRefreshing.value = true
+            try {
+                val resolved = resolveLocation()
+                val location = resolved.location
+                val error = repository.refresh(listOf(location), force = true)
+                val fresh = repository.cachedSnapshot(location.ine)
+                _state.value = when {
+                    fresh != null -> HoyUiState.Content(fresh, notice = error, locationFallback = resolved.fallback)
+                    else -> HoyUiState.Error(error ?: getApplication<Application>().getString(R.string.hoy_error_generic))
+                }
+                if (fresh != null) loadExtras(location)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

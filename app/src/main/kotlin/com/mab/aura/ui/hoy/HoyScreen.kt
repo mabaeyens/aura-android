@@ -38,9 +38,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +95,7 @@ fun HoyScreen(
     val viewModel: HoyViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val heroFamily by viewModel.heroFamily.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Returning from Ajustes after a key was just entered: retry the fetch the no-key state was blocking.
@@ -141,7 +144,15 @@ fun HoyScreen(
                 // One banner slot, so a data problem (offline, rate-limited) takes priority over the softer
                 // "showing a default location" note; the latter shows only when the fetch itself was fine.
                 val effectiveNotice = s.notice ?: locationFallbackText(context, s.locationFallback, permissionAsked)
-                HoyContent(snapshot = s.snapshot, notice = effectiveNotice, now = now, radar = s.radar, news = s.news)
+                HoyContent(
+                    snapshot = s.snapshot,
+                    notice = effectiveNotice,
+                    now = now,
+                    radar = s.radar,
+                    news = s.news,
+                    isRefreshing = isRefreshing,
+                    onRefresh = viewModel::refresh,
+                )
             }
 
             is HoyUiState.Error -> CenteredMessage {
@@ -224,6 +235,7 @@ private fun locationFallbackText(context: Context, fallback: LocationFallback?, 
     }
 
 /** The weather itself: the card stack in a vertical scroll over the sky, as the app lays it out. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HoyContent(
     snapshot: WeatherSnapshot,
@@ -231,7 +243,17 @@ private fun HoyContent(
     now: Instant,
     radar: AuraRadarInfo?,
     news: List<NewsItem>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
 ) {
+    // Pull-to-refresh wraps the scroll so a manual pull forces a fetch past the 1-hour freshness gate. This is
+    // the escape hatch from a thin cache: a cold-start snapshot that came back without current-hour data would
+    // otherwise pin the screen to "--" for the whole gate window with no way to retry.
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+    ) {
     // [BoxWithConstraints] hands us the viewport height (maxHeight) before the scroll, so we can stretch the
     // hero to fill one screenful and push every forecast card *fully* below the fold, matching iOS: the opening
     // screen is just the sky and the editorial summary, nothing of the next card showing. The fill height is
@@ -292,6 +314,7 @@ private fun HoyContent(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = insets.calculateBottomPadding() + 8.dp),
         )
+    }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.mab.aura.data
 
 import android.content.Context
+import android.util.Log
 import com.mab.aura.R
 import com.mab.aura.core.air.AirQuality
 import com.mab.aura.core.geo.comunidad
@@ -21,6 +22,7 @@ import com.mab.aura.core.uv.UVIndex
 import com.mab.aura.store.SecretStore
 import com.mab.aura.store.Settings
 import com.mab.aura.store.SnapshotCache
+import com.mab.aura.work.WeatherRefreshScheduler
 import androidx.glance.appwidget.updateAll
 import com.mab.aura.widget.AuraGlanceWidget
 import kotlinx.coroutines.CoroutineScope
@@ -112,6 +114,8 @@ class WeatherRepository(context: Context) {
         val client = client() ?: return null
         var firstError: String? = null
         fun note(error: Throwable) { if (firstError == null) firstError = messageFor(error) }
+        // Set when any location writes a thin snapshot this pass; drives the forced retry enqueued after the loop.
+        var wroteThin = false
 
         // Locations that need fetching: everything on `force`, otherwise those older than an hour or cached by
         // a build before the daily sky fields existed (their days decode with sky == null, which rendered every
@@ -176,8 +180,14 @@ class WeatherRepository(context: Context) {
         }
 
         for (location in stale) {
-            val daily = runCatching { client.municipioDiaria(location.ine) }.getOrElse { note(it); continue }
-            val hourly = runCatching { client.municipioHoraria(location.ine) }.getOrNull()
+            // Fetch the hourly first. It feeds the always-shown current temperature and hourly strip, so under a
+            // tight per-key budget it must not be the second call that trips a 429 while the daily squeezes
+            // through (the pattern behind the 2026-08-28 all-morning "--").
+            val hourly = runCatching { client.municipioHoraria(location.ine) }
+                .onFailure { logAemetFailure("hourly", location.ine, it); note(it) }
+                .getOrNull()
+            val daily = runCatching { client.municipioDiaria(location.ine) }
+                .getOrElse { logAemetFailure("daily", location.ine, it); note(it); continue }
 
             // Air quality: compose the índice from the worst pollutant across nearby stations (MITECO's own
             // method); on a miss, fall back to the single nearest station's published índice.
@@ -227,6 +237,10 @@ class WeatherRepository(context: Context) {
             // switch or first-ever fetch, where the cache is null or itself thin, still writes.
             if (snapshot.hasCurrentHourData || previous?.hasCurrentHourData != true) {
                 snapshotCache.upsert(snapshot)
+                // Track a genuine thin write (a cold start or a still-thin location with no good cache to keep),
+                // so we can schedule a forced retry below instead of leaving the widget/screen thin until the
+                // 1-hour gate expires.
+                if (!snapshot.hasCurrentHourData) wroteThin = true
             }
         }
 
@@ -235,7 +249,26 @@ class WeatherRepository(context: Context) {
         // widget timelines after a fetch. Never let a widget hiccup fail the refresh.
         runCatching { AuraGlanceWidget().updateAll(appContext) }
 
+        // A thin snapshot is a known-bad state worth correcting soon: enqueue a one-shot forced retry rather
+        // than waiting out the 1-hour gate and the 3-hour periodic cadence. Skipped when this pass was itself a
+        // forced retry, so a persistent outage doesn't re-arm from here on every attempt — the retry worker's
+        // own WorkManager backoff drives those (see [WeatherRefreshScheduler.scheduleThinRetry]).
+        if (wroteThin && !force) WeatherRefreshScheduler.scheduleThinRetry(appContext)
+
         return firstError
+    }
+
+    /**
+     * Log an AEMET fetch failure so a transient miss is diagnosable after the fact (429 vs decode vs outage),
+     * the gap that made the 2026-08-28 outage impossible to root-cause. Key-safe on purpose: an
+     * [AemetClientException]'s own message is a fixed string ("rate limited", "HTTP 429", "decoding: ...") with
+     * no URL in it, but any other throwable (an OkHttp [IOException]) could carry the request URL, which
+     * embeds the `api_key`. So log the exception's message only when it is an AemetClientException, and the
+     * bare class name otherwise. Never log the raw throwable.
+     */
+    private fun logAemetFailure(feed: String, ine: String, error: Throwable) {
+        val detail = if (error is AemetClientException) error.message else error::class.simpleName
+        Log.w(TAG, "$feed fetch failed for INE $ine: $detail")
     }
 
     /** Spanish message for any error surfaced while talking to AEMET. Direct port of `AEMETService.message`. */
@@ -252,6 +285,7 @@ class WeatherRepository(context: Context) {
 
     private companion object {
         const val ONE_HOUR_MILLIS = 3_600_000L
+        const val TAG = "AuraRefresh"
     }
 }
 

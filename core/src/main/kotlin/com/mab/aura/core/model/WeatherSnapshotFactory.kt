@@ -136,7 +136,12 @@ fun WeatherSnapshot.Companion.make(
         latitude = location.latitude,
         longitude = location.longitude,
         days = days,
-        hours = resolved?.strip ?: emptyList(),
+        // Carry the last good hourly strip forward when this refresh had no hourly feed, exactly as the
+        // current-conditions scalars above carry via `carry`. Without this a transient hourly miss emptied
+        // the strip, which blanked the hourly card and, now that the hero resolves from the strip, removed
+        // the very data heroTemp(now) re-anchors from. The carried slots keep their absolute timestamps, so
+        // upcomingHours(now) still re-anchors them correctly until the next good fetch replaces them.
+        hours = resolved?.strip ?: carry?.hours ?: emptyList(),
         alert = alert,
         bulletin = bulletin?.texto,
         bulletinPhenomenon = bulletin?.fenomenoSignificativo,

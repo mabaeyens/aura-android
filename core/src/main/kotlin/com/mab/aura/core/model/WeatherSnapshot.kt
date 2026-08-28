@@ -51,6 +51,15 @@ data class WeatherSnapshot(
     val observedMetrics: ObservedMetrics = ObservedMetrics(),
     /** The resolving station's full surface reading (temp/wind/humidity/pressure/rain), for the station card. */
     val observedReading: ObservedReading? = null,
+    /**
+     * When [observedTemp] was measured (AEMET `fint`, stamped at the top of the hour in UTC). Null when no
+     * station resolved, or when read from a cache written before this field existed. Drives the display-time
+     * "most recent" rule ([observedLeadsHero]): the observation leads the hero only when it is at least as
+     * recent as the forecast hour. Note it is a different clock from [updated] (when the app last refreshed)
+     * and from an observation RSS publish time (~30 min after the hour); never compare those against each other.
+     */
+    @Serializable(with = InstantEpochMillisSerializer::class)
+    val observedAt: Instant? = null,
     /** AEMET sky-state code for the current hour (e.g. "11", "13n"), for the condition icon. */
     val currentSky: String? = null,
     /** AEMET's Spanish description of the current sky state (e.g. "Despejado"). */
@@ -104,27 +113,76 @@ data class WeatherSnapshot(
     val updated: Instant,
 ) {
     /**
-     * The card's "now" hero temperature, resolved at DISPLAY time from the timestamped strip — never a
-     * scalar frozen when the snapshot was built. [upcomingHours] re-anchors the strip to [now] (dropping
-     * past hours, reconstructing absolute instants for older cached slots), so this reads the first upcoming
-     * hour that actually carries a temperature. That is why a day-old cached snapshot still shows *today's*
-     * number with no fetch: the strip already spans ~24h of absolutely-timestamped hours, and the hero now
-     * reads it against the real clock exactly as the strip itself does. This must be a function, not a stored
-     * value — a value resolved once at build time is what blanked the hero to "--" at the 2026-08-28 day
-     * change, when a cache built the previous day was rendered past midnight against a stale current hour.
+     * The card's "now" hero temperature, resolved at DISPLAY time. It shows whichever of the station
+     * observation and the current-hour forecast is the more recent reading, so it is never a scalar frozen
+     * when the snapshot was built.
      *
-     * Fallback order: (1) first upcoming strip hour with a temperature; (2) the stored [currentTemp] — itself
-     * the last good carried reading, never today's max — used only when the strip yields nothing (e.g. a thin
-     * carry-forward snapshot with an empty strip, or a cache so old the strip is exhausted, where a real-but-
-     * stale number still beats a blank); (3) null, the honest "—", only on a genuine cold start with neither.
+     * "Most recent" compares the observation's measurement time ([observedAt], AEMET `fint`) against the instant
+     * the hero's forecast hour begins, and a tie goes to the observation — a real measurement of the very hour
+     * the forecast predicted. So the observation leads once this hour's reading has published (AEMET publishes
+     * ~30 min after the hour); before that the re-anchored forecast, already "for now", leads. A stale
+     * observation can never win, because the forecast hour keeps advancing past it — that is what makes this
+     * self-cleaning across a day change, with no fixed freshness window.
      *
-     * Deliberately *not* today's high (a missing hourly feed must not read as a "now" temperature pinned to
-     * the day's peak) and *not* the observed-station reading (a warm nearby station can read the day's max
-     * hours before the forecast says it will). Pass the location's [zone]; it defaults to Europe/Madrid to
-     * match [upcomingHours].
+     * Source priority, first that applies wins:
+     *  1. [observedTemp], when [observedLeadsHero] — the observation carries a temperature, is not in the
+     *     future, and is at least as recent as the forecast hour (or there is no forecast value to compare
+     *     against, so the real reading is the only candidate).
+     *  2. The first upcoming strip hour that carries a temperature — [upcomingHours] re-anchors the strip to
+     *     [now] (dropping past hours, reconstructing absolute instants for older cached slots), which is why a
+     *     day-old cached snapshot still shows *today's* number with no fetch.
+     *  3. The stored [currentTemp] — the last good carried reading, never today's max — only when the strip
+     *     yields nothing (a thin carry-forward with an empty strip, or a cache so old the strip is exhausted).
+     *  4. null, the honest "—", only on a genuine cold start with none of the above.
+     *
+     * Deliberately *not* today's high: a missing hourly feed must not read as a "now" temperature pinned to the
+     * day's peak. This must be a function, not a stored value — a value resolved once at build time is what
+     * blanked the hero to "--" at the 2026-08-28 day change. Pass the location's [zone]; it defaults to
+     * Europe/Madrid to match [upcomingHours]. Kept aligned with the iOS hero-temperature rule.
      */
     fun heroTemp(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): Int? =
-        upcomingHours(now, zone).firstOrNull { it.temp != null }?.temp ?: currentTemp
+        heroTempFrom(upcomingHours(now, zone), now, zone)
+
+    /**
+     * Whether the station observation leads the hero at [now]: it carries a temperature, its measurement time
+     * [observedAt] is known and not in the future, and it is at least as recent as the current forecast hour
+     * (ties — the observation for the hour the forecast predicts — go to the measurement). Equivalent to "the
+     * observation is the more recent of the two readings", or the only reading when there is no forecast value.
+     * The station's distance was already gated when the snapshot was built (the factory keeps only the nearest
+     * recent station within 20 km). Kept identical to the iOS rule.
+     */
+    fun observedLeadsHero(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): Boolean {
+        val forecast = upcomingHours(now, zone).firstOrNull { it.temp != null }
+        return observationLeads(now, forecastHourStart(forecast, now, zone), forecast?.temp)
+    }
+
+    /** The hero temperature from an already re-anchored [strip], so [resolved] and [heroTemp] share one rule. */
+    private fun heroTempFrom(strip: List<HourSlot>, now: Instant, zone: ZoneId): Int? {
+        val forecast = strip.firstOrNull { it.temp != null }
+        return when {
+            observationLeads(now, forecastHourStart(forecast, now, zone), forecast?.temp) -> observedTemp
+            forecast?.temp != null -> forecast.temp
+            else -> currentTemp
+        }
+    }
+
+    /**
+     * The instant the hero's forecast hour begins: the slot's stamped [HourSlot.date], else the current hour
+     * start in [zone] (for reconstructed slots without a stamped date, and when there is no forecast slot).
+     */
+    private fun forecastHourStart(forecast: HourSlot?, now: Instant, zone: ZoneId): Instant =
+        forecast?.date ?: now.atZone(zone).truncatedTo(ChronoUnit.HOURS).toInstant()
+
+    /**
+     * Whether the observation is the more recent reading (tie → the measurement), or the only reading when
+     * there is no [forecastTemp]. A future (clock-skewed) or absent observation never leads.
+     */
+    private fun observationLeads(now: Instant, forecastAt: Instant, forecastTemp: Int?): Boolean {
+        val at = observedAt ?: return false
+        if (observedTemp == null) return false
+        if (at.isAfter(now)) return false
+        return forecastTemp == null || !at.isBefore(forecastAt)
+    }
 
     /**
      * The whole current-conditions family resolved at DISPLAY time, the generalisation of [heroTemp] to every
@@ -145,8 +203,14 @@ data class WeatherSnapshot(
      * that field, still shows its carried scalar); the frozen scalar is only overwritten by a real strip
      * value, never blanked by the strip's absence.
      *
+     * Temperature is the one field with a measured source: it shows whichever of the station observation and
+     * the forecast hour is more recent ([observedLeadsHero]), exactly as [heroTemp] does — computed from this
+     * same re-anchored strip, so the hero and the resolved snapshot's `currentTemp` are always the same number.
+     * Every other field is pure strip-first-non-null. Kept aligned with iOS `resolved`.
+     *
      * An empty strip (a genuine cold start, or a thin snapshot with no carried hours) returns the snapshot
-     * unchanged — there is nothing to re-derive from, and the frozen scalars are already the best available.
+     * unchanged — there is nothing to re-derive from, and the frozen scalars are already the best available —
+     * unless a leading observation applies, which still sets the temperature even with no strip.
      *
      * This must stay aligned with the iOS `resolved(at:)`: same field set, same per-field first-non-null rule,
      * same fallback to the frozen scalar. If the platforms ever move to strip-first-column instead, change
@@ -154,12 +218,18 @@ data class WeatherSnapshot(
      */
     fun resolved(now: Instant = Instant.now(), zone: ZoneId = ZoneId.of("Europe/Madrid")): WeatherSnapshot {
         val strip = upcomingHours(now, zone)
-        if (strip.isEmpty()) return this
+        // Temperature shows whichever of the observation and the forecast is more recent (see [heroTemp]);
+        // every other field re-derives from the strip. Compute it from this same strip so the hero and the
+        // resolved snapshot's currentTemp can never disagree.
+        val heroT = heroTempFrom(strip, now, zone)
+        // When the strip is empty there is nothing to re-derive, but a leading observation must still apply —
+        // so only return unchanged when the hero temperature is just the frozen scalar.
+        if (strip.isEmpty()) return if (heroT != currentTemp) copy(currentTemp = heroT) else this
         // First upcoming hour carrying each field, else keep the frozen scalar. `firstNotNullOfOrNull` walks
         // the strip in order and stops at the first hour whose selector is non-null — per-field, independently.
         fun <T> first(select: (HourSlot) -> T?): T? = strip.firstNotNullOfOrNull(select)
         return copy(
-            currentTemp = first { it.temp } ?: currentTemp,
+            currentTemp = heroT,
             currentSky = first { it.sky } ?: currentSky,
             currentSkyText = first { it.skyText } ?: currentSkyText,
             currentHumidity = first { it.humidity } ?: currentHumidity,

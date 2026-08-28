@@ -33,13 +33,20 @@ class WeatherSnapshotTest {
         sunset: Instant? = null,
         hours: List<HourSlot> = emptyList(),
         alert: WeatherAlert? = null,
+        observedTemp: Int? = null,
+        observedAt: Instant? = null,
         updated: Instant = day,
     ) = WeatherSnapshot(
         ine = "28079", localidad = "Madrid", provincia = "Madrid",
         currentTemp = currentTemp, tempMax = tempMax, currentSky = currentSky,
         currentHumidity = currentHumidity, windDirection = windDirection,
+        observedTemp = observedTemp, observedAt = observedAt,
         sunrise = sunrise, sunset = sunset, hours = hours, alert = alert, updated = updated,
     )
+
+    /** A strip slot stamped with its absolute instant, so `upcomingHours` re-anchors it against `now`. */
+    private fun stamped(hour: Int, temp: Int, on: Instant = at("2024-01-15T00:00:00Z")) =
+        HourSlot(hour = hour, temp = temp, date = on.plusSeconds(hour * 3600L))
 
     // --- heroTemp / heroIsObserved ---
 
@@ -70,6 +77,89 @@ class WeatherSnapshotTest {
         )
         // At 10:00 the strip re-anchors to the 10:00 slot: hero is 20, not the frozen 5.
         assertEquals(20, s.heroTemp(at("2024-01-15T10:00:00Z"), utc))
+    }
+
+    // --- heroTemp / observedLeadsHero: show the most recent of observed and forecast (tie -> observed) ---
+
+    @Test
+    fun heroTemp_observationLeadsOnceItIsAsRecentAsTheForecastHour() {
+        // 10:40, the 10:00 observation has published. Forecast for 10:00 is 20, the observation is 22. The
+        // observation measures the very hour the forecast predicts (a tie on the hour), so the measurement wins.
+        val now = at("2024-01-15T10:40:00Z")
+        val s = snapshot(
+            hours = listOf(stamped(10, 20), stamped(11, 21)),
+            observedTemp = 22, observedAt = at("2024-01-15T10:00:00Z"),
+        )
+        assertTrue(s.observedLeadsHero(now, utc))
+        assertEquals(22, s.heroTemp(now, utc))
+    }
+
+    @Test
+    fun heroTemp_forecastLeadsWhileTheObservationIsStillThePreviousHour() {
+        // 10:20, before the 10:00 reading has published, so the freshest observation is 09:00. The forecast is
+        // already "for" the 10:00 hour, which is more recent, so it leads. This is the first-half-hour case.
+        val now = at("2024-01-15T10:20:00Z")
+        val s = snapshot(
+            hours = listOf(stamped(10, 20), stamped(11, 21)),
+            observedTemp = 5, observedAt = at("2024-01-15T09:00:00Z"),
+        )
+        assertFalse(s.observedLeadsHero(now, utc))
+        assertEquals(20, s.heroTemp(now, utc))
+    }
+
+    @Test
+    fun heroTemp_staleObservationNeverWinsAcrossADayChange() {
+        // Opened next morning with no fresh fetch: yesterday's 14:00 observation must not lead over today's
+        // re-anchored forecast. The forecast hour keeps advancing past the observation, so it self-cleans.
+        val now = at("2024-01-16T09:40:00Z")
+        val on16 = at("2024-01-16T00:00:00Z")
+        val s = snapshot(
+            hours = listOf(stamped(9, 18, on16), stamped(10, 19, on16)),
+            observedTemp = 28, observedAt = at("2024-01-15T14:00:00Z"),
+        )
+        assertFalse(s.observedLeadsHero(now, utc))
+        assertEquals(18, s.heroTemp(now, utc))
+    }
+
+    @Test
+    fun heroTemp_observationIsTheOnlyReadingWhenThereIsNoForecast() {
+        // A thin snapshot with no strip: the observation is the only real reading, so it leads regardless of
+        // which hour it is from — there is nothing more recent to compare it against.
+        val now = at("2024-01-15T10:20:00Z")
+        val s = snapshot(currentTemp = 5, observedTemp = 22, observedAt = at("2024-01-15T09:00:00Z"))
+        assertTrue(s.observedLeadsHero(now, utc))
+        assertEquals(22, s.heroTemp(now, utc))
+    }
+
+    @Test
+    fun observedLeadsHero_rejectsFutureShortOfTheHourAndMissingReadings() {
+        val now = at("2024-01-15T10:40:00Z")
+        val strip = listOf(stamped(10, 20))
+        // A future measurement time (clock skew) never leads.
+        assertFalse(snapshot(hours = strip, observedTemp = 99, observedAt = at("2024-01-15T11:00:00Z")).observedLeadsHero(now, utc))
+        // One second short of the forecast hour: the forecast is still the more recent reading.
+        assertFalse(snapshot(hours = strip, observedTemp = 22, observedAt = at("2024-01-15T09:59:59Z")).observedLeadsHero(now, utc))
+        // A temperature with no timestamp, or a timestamp with no temperature, never leads.
+        assertFalse(snapshot(hours = strip, observedTemp = 22, observedAt = null).observedLeadsHero(now, utc))
+        assertFalse(snapshot(hours = strip, observedTemp = null, observedAt = at("2024-01-15T10:00:00Z")).observedLeadsHero(now, utc))
+    }
+
+    @Test
+    fun resolved_currentTempMatchesHeroAndAppliesALeadingObservationWithNoStrip() {
+        val now = at("2024-01-15T10:40:00Z")
+        // Thin snapshot, stale frozen scalar of 5, fresh 10:00 observation of 22. resolved() must lead
+        // currentTemp with the observation and agree with heroTemp, by construction.
+        val thin = snapshot(currentTemp = 5, observedTemp = 22, observedAt = at("2024-01-15T10:00:00Z"))
+        val r = thin.resolved(now, utc)
+        assertEquals(22, r.currentTemp)
+        assertEquals(thin.heroTemp(now, utc), r.currentTemp)
+    }
+
+    @Test
+    fun observedAt_roundTripsThroughSerialization() {
+        val original = snapshot(observedTemp = 21, observedAt = at("2024-01-15T09:00:00Z"))
+        val json = Json.encodeToString(WeatherSnapshot.serializer(), original)
+        assertEquals(original, Json.decodeFromString(WeatherSnapshot.serializer(), json))
     }
 
     // --- hasCurrentHourData ---

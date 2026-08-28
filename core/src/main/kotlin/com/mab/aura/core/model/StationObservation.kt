@@ -117,6 +117,15 @@ data class StationObservation(
     companion object {
         private val SPAIN: Locale = Locale.forLanguageTag("es-ES")
 
+        /**
+         * How far the resolving station may sit from a location and still represent it, km. Tightened from an
+         * earlier 35 km: in Spain 35 km routinely crosses a valley/sierra altitude boundary, so a distant
+         * station reads a temperature that is real but not representative of the location. The trade-off is
+         * coverage — sparse rural areas may have no station within this radius, and then the hero falls back
+         * to the forecast and the station card is hidden, which is the honest result. Kept identical to iOS.
+         */
+        const val NEAREST_STATION_KM: Double = 20.0
+
         // AEMET stamps observations like "2026-08-19T15:00:00+0000"; the `Z` letter parses the "+0000".
         private val FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US)
@@ -133,7 +142,7 @@ data class StationObservation(
             observations: List<StationObservation>,
             now: Instant = Instant.now(),
             maxAge: Duration = Duration.ofHours(3),
-            maxDistanceKm: Double = 35.0,
+            maxDistanceKm: Double = NEAREST_STATION_KM,
         ): StationObservation? {
             // Keep only each station's freshest reading that actually carries a temperature and coordinates.
             val latest = HashMap<String, StationObservation>()

@@ -90,18 +90,23 @@ fun WeatherSnapshot.Companion.make(
     val obsDistance: Double?
     val obsMetrics: ObservedMetrics
     val obsReading: ObservedReading?
+    // The reading's own measurement time (AEMET `fint`), carried so the display-time gate ([observedLeadsHero])
+    // can decide whether the observation is fresh enough to lead the hero. All-or-nothing with the fields above.
+    val obsAt: Instant?
     if (observed != null) {
         obsTemp = observed.temperature
         obsStation = observed.stationName
         obsDistance = observed.distanceKm(to = location)
         obsMetrics = observed.availableMetrics
         obsReading = observed.reading
+        obsAt = observed.timestamp
     } else {
         obsTemp = previousObserved?.observedTemp
         obsStation = previousObserved?.observedStation
         obsDistance = previousObserved?.observedStationDistanceKm
         obsMetrics = previousObserved?.observedMetrics ?: ObservedMetrics()
         obsReading = previousObserved?.observedReading
+        obsAt = previousObserved?.observedAt
     }
 
     return WeatherSnapshot(
@@ -117,6 +122,7 @@ fun WeatherSnapshot.Companion.make(
         observedStationDistanceKm = obsDistance,
         observedMetrics = obsMetrics,
         observedReading = obsReading,
+        observedAt = obsAt,
         currentSky = currentSky,
         currentSkyText = resolved?.currentText ?: carry?.currentSkyText,
         currentHumidity = humidityNow ?: carry?.currentHumidity,

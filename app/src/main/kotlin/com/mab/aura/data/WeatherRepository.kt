@@ -197,7 +197,7 @@ class WeatherRepository(context: Context) {
             val airQuality: AirQuality? = MitecoAirQuality.composite(breakdown)
                 ?: MitecoAirQuality.nearest(location.latitude, location.longitude, airStations)
 
-            // The nearest recent station to this location (freshest per station, within 3 h and 35 km), or
+            // The nearest recent station to this location (freshest per station, within 3 h and 20 km), or
             // null when none qualifies — then the station card and observed temperature stay hidden.
             val observed = observations.nearest(to = location)
 

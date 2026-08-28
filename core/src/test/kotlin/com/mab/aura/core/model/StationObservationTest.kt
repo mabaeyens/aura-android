@@ -121,7 +121,7 @@ class StationObservationTest {
 
     @Test
     fun nearest_dropsStationsBeyondMaxDistance() {
-        // A recent Barcelona reading is ~500 km away, outside the 35 km cutoff.
+        // A recent Barcelona reading is ~500 km away, outside the 20 km cutoff.
         val obs = listOf(barcelona(fint(now), 26.0))
         assertNull(StationObservation.nearest(madridLat, madridLon, obs, now = now))
     }

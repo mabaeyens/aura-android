@@ -1,0 +1,68 @@
+name: Closed testing feedback
+description: Share how the app felt during Google Play closed testing, whether or not something is broken.
+labels: ["closed-testing", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping test Aura on Google Play. This is for anything you noticed while using it, not only bugs: first impressions, something that felt confusing, something you liked, or a rough spot. If something is clearly broken, the bug report template is a better fit, but if you are not sure, this is fine.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feedback is this
+      options:
+        - First impressions
+        - Something worked well
+        - Something felt confusing or hard to use
+        - Something looked wrong
+        - The app crashed or froze
+        - A suggestion or idea
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What you were doing
+      description: What screen were you on, or what were you trying to do?
+      placeholder: I opened the app for the first time and set up my location.
+    validations:
+      required: true
+  - type: textarea
+    id: noticed
+    attributes:
+      label: What you noticed
+      description: Tell me what stood out, in your own words. Whatever you think is worth flagging.
+      placeholder: The first-run screen made sense, but I could not tell where to enter the AEMET key.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Find it on the About screen, reached from Settings, or on the app's page in the Play Store.
+      placeholder: "1.1.1"
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      description: The phone model and the version of Android it is running.
+      placeholder: Pixel 7, Android 15
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag any screenshots or a screen recording here if they help show what you mean.
+    validations:
+      required: false
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: Anything else on your mind about the app.
+    validations:
+      required: false

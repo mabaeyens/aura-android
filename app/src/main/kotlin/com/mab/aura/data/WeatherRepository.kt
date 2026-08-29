@@ -314,9 +314,10 @@ private const val OBSERVATION_TTL_MILLIS = 90 * 60 * 1000L
  * future-dated [anchor] is clamped to [now] so a bad timestamp can suppress the fetch for at most the margin
  * window, never indefinitely. Pure so it is unit-tested directly.
  *
- * Ported from `AEMETService.swift`'s observation clock. iOS also always-fetches on a single-location manual
- * refresh (`onlyINE`); Android has no manual/pull-to-refresh yet, so [force] is the only always-fetch
- * trigger. The normal passive load passes one location with `force = false`, so it is gated like any other.
+ * Ported from `AEMETService.swift`'s observation clock. iOS always-fetches on a single-location manual
+ * refresh (`onlyINE`); on Android the pull-to-refresh in "Hoy" passes [force] = true for the same reason
+ * (subject to a 1-minute UI cooldown there). The normal passive load passes `force = false`, so it is gated
+ * like any other.
  */
 internal fun observationDue(anchor: Instant?, now: Instant, force: Boolean): Boolean {
     if (force || anchor == null) return true

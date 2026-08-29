@@ -53,6 +53,15 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /** Wall-clock time (ms) of the last manual refresh we actually let through, so repeated pulls inside the
+     *  window below become no-ops. 0 means "no manual refresh yet this session". */
+    private var lastRefreshAtMillis = 0L
+
+    /** Minimum gap between two manual refreshes that hit the network. A pull-to-refresh is a coarse gesture a
+     *  user can fire many times in a row; AEMET is rate-limited, so we let one through then ignore the rest for
+     *  a minute. Matches the 60 s window the client-side RequestPacer already uses. */
+    private val refreshCooldownMillis = 60_000L
+
     /** Which hero-art family paints the sky, following the stored setting live so a change in Ajustes shows
      *  on return. Decoded from the `Settings` string; defaults to landscape, matching iOS. */
     val heroFamily: StateFlow<HeroBackground.Family> = settings.heroFamily
@@ -125,6 +134,13 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = HoyUiState.NeedsApiKey
                 return@launch
             }
+            // Time-gate the gesture: once a refresh goes through, ignore further pulls for a minute so a run of
+            // consecutive swipes doesn't fire a run of API calls. A skipped pull just no-ops — we never flip
+            // isRefreshing, so the pull spinner settles back on its own. The window starts when the fetch fires.
+            val now = System.currentTimeMillis()
+            if (now - lastRefreshAtMillis < refreshCooldownMillis) return@launch
+            lastRefreshAtMillis = now
+
             _isRefreshing.value = true
             try {
                 val resolved = resolveLocation()

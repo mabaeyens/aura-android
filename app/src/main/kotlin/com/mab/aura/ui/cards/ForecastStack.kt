@@ -59,6 +59,9 @@ fun AuraForecastStack(
     // Optional surface analysis map, fetched and passed by the host (kept out of the snapshot, like radar).
     // Null until it loads, so the surface card simply doesn't appear.
     surface: AuraSurfaceInfo? = null,
+    // Optional national text forecast, fetched and passed by the host (kept out of the snapshot, like surface).
+    // Null until today's product loads, so the national card simply doesn't appear.
+    national: NationalForecastState? = null,
     // Optional Noticias stream, fetched and passed by the host. Empty until it loads, so the news card is absent.
     news: List<NewsItem> = emptyList(),
     // When > 0, the hero fills this height (one viewport) so every forecast card falls below the fold: the first
@@ -122,6 +125,9 @@ fun AuraForecastStack(
             radar?.let { AuraRadarCard(radar = it, size = size, now = now) }
             // The synoptic surface analysis sits right after radar: both are AEMET big-picture maps, phone-only.
             surface?.let { AuraSurfaceCard(surface = it, size = size, now = now) }
+            // The national text forecast follows the surface map (the España-level prose that pairs with it),
+            // then the community bulletin narrows it to the autonomous community.
+            national?.let { AuraNationalForecastCard(state = it, size = size) }
             snapshot.bulletin?.takeIf { it.isNotEmpty() }?.let { bulletin ->
                 AuraBulletinCard(phenomenon = snapshot.bulletinPhenomenon, text = bulletin, size = size)
             }

@@ -71,6 +71,7 @@ import com.mab.aura.ui.cards.AuraForecastStack
 import com.mab.aura.ui.cards.AuraRadarInfo
 import com.mab.aura.ui.cards.AuraSurfaceInfo
 import com.mab.aura.ui.cards.AuraSize
+import com.mab.aura.ui.cards.NationalForecastState
 import com.mab.aura.ui.sky.AuraSky
 import java.time.Instant
 
@@ -159,6 +160,7 @@ fun HoyScreen(
                     now = now,
                     radar = s.radar,
                     surface = s.surface,
+                    national = s.national,
                     news = s.news,
                     isRefreshing = isRefreshing,
                     onRefresh = viewModel::refresh,
@@ -253,6 +255,7 @@ private fun HoyContent(
     now: Instant,
     radar: AuraRadarInfo?,
     surface: AuraSurfaceInfo?,
+    national: NationalForecastState?,
     news: List<NewsItem>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -313,6 +316,7 @@ private fun HoyContent(
                 now = now,
                 radar = radar,
                 surface = surface,
+                national = national,
                 news = news,
                 heroFillHeight = heroFill,
             )

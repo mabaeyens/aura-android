@@ -69,6 +69,7 @@ import com.mab.aura.core.model.NewsItem
 import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.ui.cards.AuraForecastStack
 import com.mab.aura.ui.cards.AuraRadarInfo
+import com.mab.aura.ui.cards.AuraSurfaceInfo
 import com.mab.aura.ui.cards.AuraSize
 import com.mab.aura.ui.sky.AuraSky
 import java.time.Instant
@@ -157,6 +158,7 @@ fun HoyScreen(
                     notice = effectiveNotice,
                     now = now,
                     radar = s.radar,
+                    surface = s.surface,
                     news = s.news,
                     isRefreshing = isRefreshing,
                     onRefresh = viewModel::refresh,
@@ -250,6 +252,7 @@ private fun HoyContent(
     notice: String?,
     now: Instant,
     radar: AuraRadarInfo?,
+    surface: AuraSurfaceInfo?,
     news: List<NewsItem>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -309,6 +312,7 @@ private fun HoyContent(
                 size = AuraSize.Phone,
                 now = now,
                 radar = radar,
+                surface = surface,
                 news = news,
                 heroFillHeight = heroFill,
             )

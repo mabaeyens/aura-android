@@ -243,6 +243,11 @@
     <string name="card_radar_intensity_moderate">Moderate</string>
     <string name="card_radar_intensity_strong">Strong</string>
     <string name="card_radar_intensity_torrential">Torrential</string>
+    <string name="card_surface_title">Surface analysis</string>
+    <string name="card_surface_content_description">AEMET surface analysis map: isobars, high and low pressure centres, and fronts</string>
+    <string name="card_surface_valid">Valid for %1$s UTC</string>
+    <string name="card_surface_hint">Pinch to zoom · tap ⓘ for the symbols</string>
+    <string name="card_surface_legend_action">Show the map symbols</string>
     <string name="card_sunarc_title">Sun</string>
     <string name="card_sunarc_sunrise">Sunrise</string>
     <string name="card_sunarc_sunset">Sunset</string>
@@ -311,6 +316,25 @@
     <string name="sheet_scale_dominant">dominant</string>
     <string name="sheet_scale_not_measured">Not measured at this station</string>
     <string name="sheet_scale_distance">%1$s km away</string>
+    <string name="sheet_surface_title">Map symbols</string>
+    <string name="sheet_surface_subtitle">What the lines, pressure centres and fronts mean.</string>
+    <string name="sheet_surface_isobars">Isobars</string>
+    <string name="sheet_surface_isobars_detail">Lines of equal pressure (hPa). The closer together, the stronger the wind.</string>
+    <string name="sheet_surface_high">A · high pressure</string>
+    <string name="sheet_surface_high_detail">Spanish «A» for alta (uppercase the main centre, lowercase a secondary one). Settled weather, clear skies.</string>
+    <string name="sheet_surface_low">B · low pressure</string>
+    <string name="sheet_surface_low_detail">Spanish «B» for baja. A centre of unsettled weather: cloud, rain and wind.</string>
+    <string name="sheet_surface_warm">Warm front</string>
+    <string name="sheet_surface_warm_detail">Red semicircles. Warm air advancing; steady, gentle rain.</string>
+    <string name="sheet_surface_cold">Cold front</string>
+    <string name="sheet_surface_cold_detail">Blue triangles. Cold air advancing; sharper showers and storms.</string>
+    <string name="sheet_surface_occluded">Occluded front</string>
+    <string name="sheet_surface_occluded_detail">Purple triangles and semicircles. The cold front has caught up with the warm one in a mature low.</string>
+    <string name="sheet_surface_stationary">Stationary front</string>
+    <string name="sheet_surface_stationary_detail">Alternating triangles and semicircles. The boundary is barely moving; persistent weather.</string>
+    <string name="sheet_surface_trough">Trough or instability line</string>
+    <string name="sheet_surface_trough_detail">A dashed line. A trough of low pressure with no clear temperature change.</string>
+    <string name="sheet_surface_footnote">AEMET observed analysis, reissued every 12 hours. The map keeps its original labels (A = alta = high, B = baja = low).</string>
 
     <!-- Widget -->
     <string name="widget_content_aviso">Warning</string>

@@ -246,6 +246,11 @@
     <string name="card_radar_intensity_moderate">Moderada</string>
     <string name="card_radar_intensity_strong">Fuerte</string>
     <string name="card_radar_intensity_torrential">Torrencial</string>
+    <string name="card_surface_title">Análisis de superficie</string>
+    <string name="card_surface_content_description">Mapa de análisis de superficie de AEMET: isobaras, centros de altas y bajas presiones y frentes</string>
+    <string name="card_surface_valid">Válido para las %1$s UTC</string>
+    <string name="card_surface_hint">Pellizca para ampliar · toca ⓘ para ver los símbolos</string>
+    <string name="card_surface_legend_action">Ver los símbolos del mapa</string>
     <string name="card_sunarc_title">Sol</string>
     <string name="card_sunarc_sunrise">Orto</string>
     <string name="card_sunarc_sunset">Ocaso</string>
@@ -314,6 +319,25 @@
     <string name="sheet_scale_dominant">dominante</string>
     <string name="sheet_scale_not_measured">No medido en esta estación</string>
     <string name="sheet_scale_distance">a %1$s km</string>
+    <string name="sheet_surface_title">Símbolos del mapa</string>
+    <string name="sheet_surface_subtitle">Qué significan las líneas, los centros de presión y los frentes.</string>
+    <string name="sheet_surface_isobars">Isobaras</string>
+    <string name="sheet_surface_isobars_detail">Líneas de igual presión (hPa). Cuanto más juntas, más fuerte es el viento.</string>
+    <string name="sheet_surface_high">A · altas presiones</string>
+    <string name="sheet_surface_high_detail">«A» de alta (mayúscula la principal, minúscula la secundaria). Tiempo estable y cielos despejados.</string>
+    <string name="sheet_surface_low">B · bajas presiones</string>
+    <string name="sheet_surface_low_detail">«B» de baja. Núcleo de mal tiempo: nubes, lluvia y viento.</string>
+    <string name="sheet_surface_warm">Frente cálido</string>
+    <string name="sheet_surface_warm_detail">Semicírculos rojos. Avanza aire cálido; lluvia suave y continua.</string>
+    <string name="sheet_surface_cold">Frente frío</string>
+    <string name="sheet_surface_cold_detail">Triángulos azules. Avanza aire frío; chubascos y tormentas más intensas.</string>
+    <string name="sheet_surface_occluded">Frente ocluido</string>
+    <string name="sheet_surface_occluded_detail">Triángulos y semicírculos morados. El frente frío alcanza al cálido en un ciclón maduro.</string>
+    <string name="sheet_surface_stationary">Frente estacionario</string>
+    <string name="sheet_surface_stationary_detail">Triángulos y semicírculos alternos. El límite apenas se mueve; tiempo persistente.</string>
+    <string name="sheet_surface_trough">Vaguada o línea de inestabilidad</string>
+    <string name="sheet_surface_trough_detail">Línea discontinua. Un surco de baja presión sin cambio claro de temperatura.</string>
+    <string name="sheet_surface_footnote">Análisis observado de AEMET, reeditado cada 12 horas. El mapa conserva las etiquetas originales (A = alta, B = baja).</string>
 
     <!-- Widget -->
     <string name="widget_content_aviso">Aviso</string>

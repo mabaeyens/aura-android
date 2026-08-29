@@ -12,11 +12,13 @@ import com.mab.aura.core.model.WeatherSnapshot
 import com.mab.aura.core.net.NewsService
 import com.mab.aura.core.time.AuraTime
 import com.mab.aura.data.RadarRepository
+import com.mab.aura.data.SurfaceAnalysisRepository
 import com.mab.aura.data.WeatherRepository
 import com.mab.aura.location.LocationProvider
 import com.mab.aura.location.LocationResult
 import com.mab.aura.store.Settings
 import com.mab.aura.ui.cards.AuraRadarInfo
+import com.mab.aura.ui.cards.AuraSurfaceInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +43,7 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = WeatherRepository(app)
     private val radarRepository = RadarRepository(app)
+    private val surfaceRepository = SurfaceAnalysisRepository(app)
     private val newsService = NewsService()
     private val settings = Settings(app)
     private val locationProvider = LocationProvider(app)
@@ -83,6 +86,8 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
         // Tidy stale radar frames left in the cache from earlier sessions (>24 h), matching iOS's launch-time
         // prune. Cheap and off the main path — the live TTL is 10 min, so these are dead weight.
         radarRepository.pruneCache()
+        // Same tidy for stale surface-analysis maps (>48 h; the live TTL is 12 h).
+        surfaceRepository.pruneCache()
         load()
     }
 
@@ -159,15 +164,23 @@ class HoyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Fetch the radar frame and the news stream for [location] concurrently, folding each into the current
-     * [HoyUiState.Content] as it lands. Guarded by INE: if the user has since switched place (the state now
-     * shows a different snapshot), a late result is dropped rather than painting the wrong location's card.
+     * Fetch the radar frame, the surface analysis map and the news stream for [location] concurrently, folding
+     * each into the current [HoyUiState.Content] as it lands. Guarded by INE: if the user has since switched
+     * place (the state now shows a different snapshot), a late result is dropped rather than painting the wrong
+     * location's card. The surface map is location-independent (one national chart), but it's guarded the same
+     * way so a late arrival doesn't fight a place switch mid-fetch.
      */
     private fun loadExtras(location: Location) {
         viewModelScope.launch {
             val frame = radarRepository.frame(location)
             _state.update { s ->
                 if (s is HoyUiState.Content && s.snapshot.ine == location.ine) s.copy(radar = frame) else s
+            }
+        }
+        viewModelScope.launch {
+            val map = surfaceRepository.map()
+            _state.update { s ->
+                if (s is HoyUiState.Content && s.snapshot.ine == location.ine) s.copy(surface = map) else s
             }
         }
         viewModelScope.launch {
@@ -232,14 +245,15 @@ sealed interface HoyUiState {
      * Weather to show. [notice] is a non-blocking banner (e.g. "offline, showing last data"), or null.
      * [locationFallback] is set only when we couldn't use the device position and fell back to a default place,
      * so the screen can explain why; the screen maps it to text and decides when to show it (see [LocationFallback]).
-     * [radar] and [news] arrive after the forecast (fetched separately, kept out of the snapshot); they start
-     * null/empty and fill in when their fetch lands, so their cards appear a moment later.
+     * [radar], [surface] and [news] arrive after the forecast (fetched separately, kept out of the snapshot);
+     * they start null/empty and fill in when their fetch lands, so their cards appear a moment later.
      */
     data class Content(
         val snapshot: WeatherSnapshot,
         val notice: String? = null,
         val locationFallback: LocationFallback? = null,
         val radar: AuraRadarInfo? = null,
+        val surface: AuraSurfaceInfo? = null,
         val news: List<NewsItem> = emptyList(),
     ) : HoyUiState
 

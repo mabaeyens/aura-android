@@ -246,6 +246,16 @@ class AemetClient(
         fetchBinary("/red/radar/regional/$code")
 
     /**
+     * The latest observed surface analysis chart (isobars, high/low centres and fronts over Europe and the
+     * North Atlantic). Raw image bytes: a single-frame GIF stored rotated portrait, which the caller decodes
+     * and rotates 90° clockwise into a wide landscape map. AEMET reissues it every 12 h, so the app fetches
+     * it at most once per 12 h. Mirrors [radarRegional]; the two-call envelope→`datos` model and pacing are
+     * handled by [fetchBinary].
+     */
+    suspend fun surfaceAnalysis(): ByteArray =
+        fetchBinary("/mapasygraficos/analisis")
+
+    /**
      * Active meteorological warnings for an AEMET avisos area (a `.tar` of CAP-XML files). [area] is a
      * two-digit community code (from `AvisoArea.forProvincia`). The payload is unpacked with [TarReader]
      * and each `.xml` member parsed by [CAPParser]; filter the result to a location by province with

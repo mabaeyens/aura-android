@@ -56,6 +56,9 @@ fun AuraForecastStack(
     // Optional radar frame, fetched and passed by the host (kept out of the snapshot). Null until it loads, so
     // the radar card simply doesn't appear.
     radar: AuraRadarInfo? = null,
+    // Optional surface analysis map, fetched and passed by the host (kept out of the snapshot, like radar).
+    // Null until it loads, so the surface card simply doesn't appear.
+    surface: AuraSurfaceInfo? = null,
     // Optional Noticias stream, fetched and passed by the host. Empty until it loads, so the news card is absent.
     news: List<NewsItem> = emptyList(),
     // When > 0, the hero fills this height (one viewport) so every forecast card falls below the fold: the first
@@ -117,6 +120,8 @@ fun AuraForecastStack(
                 )
             }
             radar?.let { AuraRadarCard(radar = it, size = size, now = now) }
+            // The synoptic surface analysis sits right after radar: both are AEMET big-picture maps, phone-only.
+            surface?.let { AuraSurfaceCard(surface = it, size = size, now = now) }
             snapshot.bulletin?.takeIf { it.isNotEmpty() }?.let { bulletin ->
                 AuraBulletinCard(phenomenon = snapshot.bulletinPhenomenon, text = bulletin, size = size)
             }

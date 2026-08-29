@@ -97,9 +97,10 @@ fun WeatherSnapshot.Companion.make(
     val obsDistance: Double?
     val obsMetrics: ObservedMetrics
     val obsReading: ObservedReading?
-    // The reading's own measurement time (AEMET `fint`), carried so the display-time gates
-    // ([WeatherSnapshot.observedLeadsHero], [WeatherSnapshot.observationIsFresh]) can decide whether the
-    // observation is fresh enough to lead the hero and to show its card. All-or-nothing with the fields above.
+    // The reading's own measurement time (AEMET `fint`), carried so the display-time gate
+    // ([WeatherSnapshot.observationIsFresh]) can decide whether the observation is fresh enough to show its
+    // card, and to fill the hero when there is no forecast at all. The hero never lets it override a forecast.
+    // All-or-nothing with the fields above.
     val obsAt: Instant?
     if (observed != null) {
         obsTemp = observed.temperature

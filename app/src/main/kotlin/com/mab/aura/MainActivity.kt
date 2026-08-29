@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.mab.aura.ui.about.AcercaScreen
 import com.mab.aura.ui.help.AyudaScreen
+import com.mab.aura.ui.help.FreshnessScreen
 import com.mab.aura.ui.hoy.HoyScreen
 import com.mab.aura.ui.locations.AddLocationScreen
 import com.mab.aura.ui.locations.LocationsScreen
@@ -21,7 +22,7 @@ import com.mab.aura.ui.theme.AuraTheme
 import com.mab.aura.work.WeatherRefreshScheduler
 
 /** The app's destinations. Hoy is the root; every other screen returns to a statically-known parent (see below). */
-private enum class Screen { Hoy, Settings, Locations, AddLocation, Help, About }
+private enum class Screen { Hoy, Settings, Locations, AddLocation, Help, DataFreshness, About }
 
 /**
  * The app's single activity. It hosts the live "Hoy" screen (a full-bleed sky, its own surface), "Ajustes",
@@ -84,6 +85,17 @@ class MainActivity : ComponentActivity() {
                         AyudaScreen(
                             modifier = Modifier.fillMaxSize(),
                             onBack = { screen = Screen.Hoy },
+                            onOpenFreshness = { screen = Screen.DataFreshness },
+                        )
+                    }
+
+                    // The one screen whose parent is Ayuda, not Hoy: opened from a link inside Help, so Back
+                    // returns there rather than all the way to Hoy.
+                    Screen.DataFreshness -> {
+                        BackHandler { screen = Screen.Help }
+                        FreshnessScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Help },
                         )
                     }
 

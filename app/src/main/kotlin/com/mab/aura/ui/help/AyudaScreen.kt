@@ -19,12 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -34,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -68,7 +71,7 @@ import com.mab.aura.ui.theme.Palette
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun AyudaScreen(onBack: () -> Unit, onOpenFreshness: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     fun openApiKeyPage() {
         val url = "https://opendata.aemet.es/centrodedescargas/altaUsuario"
@@ -97,6 +100,9 @@ fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             ApiKeySection(onRequestKey = ::openApiKeyPage)
+            // Tappable row that opens the data-freshness page. Sits right under the API-key how-to, matching
+            // where iOS links it from its Help screen.
+            FreshnessLink(onOpen = onOpenFreshness)
             SkySection()
             TemperatureSection()
             RainHumiditySection()
@@ -111,7 +117,101 @@ fun AyudaScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * "Actualización de los datos" — the data-freshness sub-page, pushed from [AyudaScreen]. It explains where
+ * each reading comes from and how often it refreshes, so the mix of cadences (a station reading published
+ * 20-40 min after the hour, an hourly forecast, a twice-daily bulletin, a 10-min radar) never reads as the
+ * app being out of date. Kept in step with the iOS "Data freshness" page; the stated cadences mirror the real
+ * constants in the code (see [com.mab.aura.data.WeatherRepository], `RadarRepository`, `NewsService`, and the
+ * one-minute pull-to-refresh cooldown in [com.mab.aura.ui.hoy.HoyViewModel]). Pure copy: it fetches nothing.
+ *
+ * It reuses this file's [Section] and [Body] blocks so it looks like the rest of Ayuda; each source is a plain
+ * paragraph rather than a titled row, because every string already names what it describes ("La cabecera…",
+ * "La previsión municipal…"), matching how iOS lays it out.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FreshnessScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.help_freshness_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+        ) {
+            Body(stringResource(R.string.help_freshness_intro))
+            Section(header = stringResource(R.string.help_freshness_data_header)) {
+                Body(stringResource(R.string.help_freshness_observed))
+                Body(stringResource(R.string.help_freshness_forecast))
+                Body(stringResource(R.string.help_freshness_bulletin))
+                Body(stringResource(R.string.help_freshness_radar))
+                Body(stringResource(R.string.help_freshness_uv))
+                Body(stringResource(R.string.help_freshness_air))
+                Body(stringResource(R.string.help_freshness_aviso))
+                Body(stringResource(R.string.help_freshness_news))
+            }
+            Section(header = stringResource(R.string.help_freshness_app_header)) {
+                Body(stringResource(R.string.help_freshness_refresh))
+            }
+        }
+    }
+}
+
 // MARK: Sections
+
+/** The tappable row in [AyudaScreen] that opens [FreshnessScreen]: a title, a one-line teaser and a chevron,
+ *  in a tonal surface so it reads as a link rather than a legend row. */
+@Composable
+private fun FreshnessLink(onOpen: () -> Unit) {
+    Surface(
+        onClick = onOpen,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Refresh,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(R.string.help_freshness_link_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = stringResource(R.string.help_freshness_link_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
 
 @Composable
 private fun ApiKeySection(onRequestKey: () -> Unit) {

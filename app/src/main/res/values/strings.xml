@@ -22,6 +22,22 @@
     <string name="help_apikey_step3">AEMET te envía la clave por correo (mira también en spam).</string>
     <string name="help_apikey_step4">Pégala en Ajustes → Clave API.</string>
     <string name="help_apikey_button">Solicitar mi clave en AEMET</string>
+    <!-- Help screen: data-freshness sub-page (opened from Ayuda, just under the API-key how-to) -->
+    <string name="help_freshness_link_title">Cuándo se actualiza cada dato</string>
+    <string name="help_freshness_link_body">Qué muestra cada tarjeta y cada cuánto llega dato nuevo.</string>
+    <string name="help_freshness_title">Actualización de los datos</string>
+    <string name="help_freshness_intro">Aura muestra al instante lo último que guardó y se actualiza en segundo plano. Cada fuente tiene su propio ritmo, así que no todo cambia a la vez.</string>
+    <string name="help_freshness_data_header">De dónde viene cada dato</string>
+    <string name="help_freshness_observed">La cabecera muestra la temperatura observada en la estación más cercana para la hora actual. AEMET mide en punto, a las HH:00, pero publica esa lectura entre 20 y 40 minutos después, así que la de las 12:00 puede no llegar hasta las 12:32. Hasta entonces se mantiene la última lectura buena; si aún no hay observación, se usa la previsión de esa hora.</string>
+    <string name="help_freshness_forecast">La previsión municipal de AEMET se elabora varias veces al día. Aura la vuelve a pedir cuando su copia tiene más de una hora, o cuando tiras para actualizar.</string>
+    <string name="help_freshness_bulletin">El comentario en prosa es el boletín oficial de tu comunidad autónoma. AEMET lo emite una o dos veces al día y solo lo corrige si cambia lo previsto. Lleva su propia hora de elaboración (hora oficial).</string>
+    <string name="help_freshness_radar">La imagen del radar regional se renueva más o menos cada 10 minutos. Aura conserva el último fotograma 10 minutos antes de volver a pedirlo.</string>
+    <string name="help_freshness_uv">El número grande es el máximo diario con cielo despejado que prevé AEMET, un valor para todo el día, no el de ahora. La curva por horas de debajo viene de CAMS y sí muestra cómo sube y baja el UV a lo largo del día.</string>
+    <string name="help_freshness_air">El dato de calidad del aire es la última hora válida de la estación más cercana (MITECO). El feed nacional se actualiza cada hora.</string>
+    <string name="help_freshness_aviso">Los avisos por fenómenos adversos son los de AEMET (Meteoalerta). Se publican y se revisan a lo largo del día conforme AEMET los emite.</string>
+    <string name="help_freshness_news">Los titulares se guardan 30 minutos antes de refrescar las fuentes.</string>
+    <string name="help_freshness_app_header">En la app</string>
+    <string name="help_freshness_refresh">Tira hacia abajo para forzar la actualización del lugar en pantalla. Después hay un minuto de espera: si vuelves a tirar dentro de ese minuto, se reutiliza lo que ya hay y no se llama otra vez a AEMET, para no saturar la fuente.</string>
     <string name="help_sky_header">Condiciones del cielo</string>
     <string name="help_sky_footer">De noche, el sol de estos iconos se convierte en luna.</string>
     <string name="help_sky_clear">Despejado</string>

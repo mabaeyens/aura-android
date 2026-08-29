@@ -19,6 +19,22 @@
     <string name="help_apikey_step3">AEMET emails you the key (check your spam folder too).</string>
     <string name="help_apikey_step4">Paste it into Settings → API key.</string>
     <string name="help_apikey_button">Request my key from AEMET</string>
+    <!-- Help screen: data-freshness sub-page (opened from Help, just under the API-key how-to) -->
+    <string name="help_freshness_link_title">When each reading updates</string>
+    <string name="help_freshness_link_body">What each card shows, and how often new data arrives.</string>
+    <string name="help_freshness_title">Data freshness</string>
+    <string name="help_freshness_intro">Aura shows the last data it saved right away and refreshes in the background. Every source has its own rhythm, so not everything changes at once.</string>
+    <string name="help_freshness_data_header">Where each reading comes from</string>
+    <string name="help_freshness_observed">The headline shows the temperature observed at the nearest station for the current hour. AEMET measures on the hour, at HH:00, but publishes that reading 20 to 40 minutes later, so the 12:00 reading may not arrive until around 12:32. Until then the last good reading stays; if there is no observation yet, the forecast for that hour is shown instead.</string>
+    <string name="help_freshness_forecast">AEMET\'s municipal forecast is issued several times a day. Aura re-fetches it once its copy is over an hour old, or when you pull to refresh.</string>
+    <string name="help_freshness_bulletin">The written summary is your region\'s official bulletin. AEMET issues it once or twice a day and only amends it when the outlook changes. It carries its own issue time (official time).</string>
+    <string name="help_freshness_radar">The regional radar image refreshes about every 10 minutes. Aura keeps the last frame for 10 minutes before fetching a new one.</string>
+    <string name="help_freshness_uv">The big number is AEMET\'s clear-sky daily maximum, one value for the whole day, not the level right now. The hourly curve below it comes from CAMS and does show how UV rises and falls through the day.</string>
+    <string name="help_freshness_air">The air-quality reading is the latest valid hour from the nearest station (MITECO). The national feed updates hourly.</string>
+    <string name="help_freshness_aviso">Warnings for severe weather come from AEMET (Meteoalerta). They are published and revised through the day as AEMET issues them.</string>
+    <string name="help_freshness_news">Headlines are cached for 30 minutes before the feeds refresh.</string>
+    <string name="help_freshness_app_header">In the app</string>
+    <string name="help_freshness_refresh">Pull down to force a refresh of the place on screen. A one-minute cooldown follows: pull again within that minute and Aura reuses what is already there instead of calling AEMET again, so the source is not hammered.</string>
     <string name="help_sky_header">Sky conditions</string>
     <string name="help_sky_footer">At night, the sun in these icons becomes a moon.</string>
     <string name="help_sky_clear">Clear</string>

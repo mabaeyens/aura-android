@@ -85,7 +85,12 @@ fun AuraHeroCard(
         )
 
         Text(
-            text = snapshot.heroTemp(now, zone)?.let { "$it°" } ?: "—",
+            // The hero temperature must read the SAME zone as the hourly strip (upcomingHours) and the widget,
+            // or the number here could disagree with the strip's first column and with the widget for a device
+            // in a fractional-hour zone (e.g. India +5:30). Those all use heroTemp's Europe/Madrid default, so
+            // let it default here too rather than passing the device `zone` used for the chrome labels above —
+            // Aura is a Spain app and iOS resolves every display surface in Madrid.
+            text = snapshot.heroTemp(now)?.let { "$it°" } ?: "—",
             fontSize = size.heroTemp,
             fontWeight = FontWeight.Bold,
             color = Color.White,

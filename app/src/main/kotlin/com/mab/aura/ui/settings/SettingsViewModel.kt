@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mab.aura.core.hero.HeroBackground
+import com.mab.aura.core.net.AemetClient
+import com.mab.aura.core.net.KeyStatus
 import com.mab.aura.store.SecretStore
 import com.mab.aura.store.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** The state of the "Comprobar clave" check, so the screen can show a spinner-free label and one result line. */
+sealed interface VerifyState {
+    /** No check has run, or the field changed since the last one. */
+    data object Idle : VerifyState
+    /** A check is in flight; the button is disabled and shows "Comprobando…". */
+    data object Checking : VerifyState
+    /** A check finished with this outcome. */
+    data class Done(val status: KeyStatus) : VerifyState
+}
 
 /**
  * The state behind "Ajustes": the AEMET key's presence and the 24 h / 12 h clock preference. Android port of
@@ -36,6 +48,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     /** True once a key has been saved this visit, so the screen can show a one-off "Clave actualizada." line. */
     val justSaved: StateFlow<Boolean> = _justSaved.asStateFlow()
 
+    private val _verifyState = MutableStateFlow<VerifyState>(VerifyState.Idle)
+    /** The result of the last "Comprobar clave" check, driving the button label and the status line. */
+    val verifyState: StateFlow<VerifyState> = _verifyState.asStateFlow()
+
     /**
      * The stored clock preference (true = 24 h). Backed by the DataStore flow; `WhileSubscribed` lets the
      * upstream collector stop shortly after the screen leaves, and `true` matches the store's own default.
@@ -53,6 +69,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         secretStore.setApiKey(key)
         _apiKeyPresent.value = !secretStore.apiKey().isNullOrEmpty()
         _justSaved.value = true
+        _verifyState.value = VerifyState.Idle
     }
 
     /** Remove the stored key. */
@@ -60,6 +77,30 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         secretStore.setApiKey("")
         _apiKeyPresent.value = !secretStore.apiKey().isNullOrEmpty()
         _justSaved.value = false
+        _verifyState.value = VerifyState.Idle
+    }
+
+    /**
+     * Check whether a key actually works against AEMET. Verifies the key currently typed in the field if there
+     * is one (cleaned exactly like a save, so a wrapped paste is tested as it would be stored), otherwise the
+     * stored key. A no-op when there is neither, matching the button's disabled state. The check is one cheap
+     * envelope probe ([AemetClient.verifyKey]); the plaintext key stays local to this call.
+     */
+    fun verifyKey(typedKey: String) {
+        // Same whitespace cleaning as SecretStore.setApiKey, so we test what a save would actually persist.
+        val typed = typedKey.filterNot { it.isWhitespace() }
+        val key = typed.ifEmpty { secretStore.apiKey().orEmpty() }
+        if (key.isEmpty()) return
+        _verifyState.value = VerifyState.Checking
+        viewModelScope.launch {
+            val status = AemetClient(key).verifyKey()
+            _verifyState.value = VerifyState.Done(status)
+        }
+    }
+
+    /** Clear the last verify result, so an edited key does not keep showing a stale outcome. */
+    fun resetVerify() {
+        _verifyState.value = VerifyState.Idle
     }
 
     /** Persist the 24 h / 12 h choice; the DataStore write flows back to [use24h] and to AuraTime. */

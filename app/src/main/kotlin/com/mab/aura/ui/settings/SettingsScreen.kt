@@ -5,18 +5,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -31,7 +36,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -41,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mab.aura.R
 import com.mab.aura.core.hero.HeroBackground
+import com.mab.aura.core.net.KeyStatus
 
 /**
  * "Ajustes" — enter the AEMET key, choose the clock format, and pick the sky-art family. Android port of
@@ -57,6 +65,7 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val viewModel: SettingsViewModel = viewModel()
     val apiKeyPresent by viewModel.apiKeyPresent.collectAsStateWithLifecycle()
     val justSaved by viewModel.justSaved.collectAsStateWithLifecycle()
+    val verifyState by viewModel.verifyState.collectAsStateWithLifecycle()
     val use24h by viewModel.use24h.collectAsStateWithLifecycle()
     val heroFamily by viewModel.heroFamily.collectAsStateWithLifecycle()
 
@@ -84,8 +93,11 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             ApiKeySection(
                 apiKeyPresent = apiKeyPresent,
                 justSaved = justSaved,
+                verifyState = verifyState,
                 onSave = viewModel::saveKey,
                 onClear = viewModel::clearKey,
+                onVerify = viewModel::verifyKey,
+                onResetVerify = viewModel::resetVerify,
             )
             HorizontalDivider()
             ClockSection(use24h = use24h, onChange = viewModel::setUse24h)
@@ -97,13 +109,19 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** AEMET key entry: a masked field, a save (disabled while blank), an optional clear, and a status line. */
+/**
+ * AEMET key entry: a masked field, a save (disabled while blank), a "Comprobar clave" check, an optional
+ * clear, and the status lines. [verifyState] drives the check button's label and the one-line result.
+ */
 @Composable
 private fun ApiKeySection(
     apiKeyPresent: Boolean,
     justSaved: Boolean,
+    verifyState: VerifyState,
     onSave: (String) -> Unit,
     onClear: () -> Unit,
+    onVerify: (String) -> Unit,
+    onResetVerify: () -> Unit,
 ) {
     // The plaintext key lives only here, in local screen state, and is cleared the moment it is saved.
     var keyInput by rememberSaveable { mutableStateOf("") }
@@ -111,7 +129,8 @@ private fun ApiKeySection(
     SectionHeader(stringResource(R.string.settings_api_key_header))
     OutlinedTextField(
         value = keyInput,
-        onValueChange = { keyInput = it },
+        // Editing the key invalidates any previous check result, so drop it rather than leave it stale.
+        onValueChange = { keyInput = it; onResetVerify() },
         label = { Text(stringResource(R.string.settings_aemet_key_label)) },
         singleLine = true,
         // Mask the token and switch off autocapitalisation/autocorrect — it is an opaque credential, not prose.
@@ -122,6 +141,7 @@ private fun ApiKeySection(
         ),
         modifier = Modifier.fillMaxWidth(),
     )
+    val checking = verifyState is VerifyState.Checking
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Button(
             onClick = {
@@ -132,11 +152,25 @@ private fun ApiKeySection(
         ) {
             Text(stringResource(R.string.settings_save_key))
         }
+        // Verifies the typed key if the field has one, otherwise the stored key. Disabled while a check runs
+        // and when there is neither a typed nor a stored key to test.
+        OutlinedButton(
+            onClick = { onVerify(keyInput) },
+            enabled = !checking && (keyInput.isNotBlank() || apiKeyPresent),
+        ) {
+            Text(
+                if (checking) stringResource(R.string.settings_verify_checking)
+                else stringResource(R.string.settings_verify_key),
+            )
+        }
         if (apiKeyPresent) {
             TextButton(onClick = onClear) {
                 Text(stringResource(R.string.settings_clear_key), color = MaterialTheme.colorScheme.error)
             }
         }
+    }
+    if (verifyState is VerifyState.Done) {
+        VerifyResultLine(verifyState.status)
     }
     Text(
         text = if (apiKeyPresent) stringResource(R.string.settings_key_stored)
@@ -156,6 +190,36 @@ private fun ApiKeySection(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/**
+ * The one-line outcome of a "Comprobar clave" check: an icon and colour that read at a glance (green works,
+ * red is the key, orange means the problem is elsewhere) next to the matching message. Green and orange are
+ * fixed status colours; red reuses the theme's semantic error colour.
+ */
+@Composable
+private fun VerifyResultLine(status: KeyStatus) {
+    val green = Color(0xFF2E7D32)
+    val orange = Color(0xFFEF6C00)
+    val (icon, tint, textRes) = when (status) {
+        KeyStatus.Valid -> Triple(Icons.Filled.Check, green, R.string.settings_verify_valid)
+        KeyStatus.InvalidKey -> Triple(Icons.Filled.Clear, MaterialTheme.colorScheme.error, R.string.settings_verify_invalid)
+        KeyStatus.RateLimited -> Triple(Icons.Filled.Info, orange, R.string.settings_verify_rate_limited)
+        KeyStatus.Offline -> Triple(Icons.Filled.Info, orange, R.string.settings_verify_offline)
+        KeyStatus.ServerProblem -> Triple(Icons.Filled.Info, orange, R.string.settings_verify_server)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // The adjacent text carries the meaning for screen readers, so the icon is decorative.
+        Icon(icon, contentDescription = null, tint = tint)
+        Text(
+            text = stringResource(textRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = tint,
+        )
+    }
 }
 
 /** The 24 h / 12 h clock choice as a two-segment control, applied everywhere through AuraTime. */

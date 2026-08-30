@@ -143,6 +143,13 @@
     <string name="settings_key_absent">No key stored.</string>
     <string name="settings_key_updated">Key updated.</string>
     <string name="settings_key_help">If the forecast stops updating, request another free key at opendata.aemet.es and paste it here.</string>
+    <string name="settings_verify_key">Verify key</string>
+    <string name="settings_verify_checking">Checking…</string>
+    <string name="settings_verify_valid">Your key is working.</string>
+    <string name="settings_verify_invalid">Your key is invalid or has expired. Copy it again.</string>
+    <string name="settings_verify_rate_limited">Too many requests right now. The key looks fine; try again in a minute.</string>
+    <string name="settings_verify_offline">No connection. Check your network and try again.</string>
+    <string name="settings_verify_server">AEMET isn\'t responding right now. The key doesn\'t look like the problem.</string>
     <string name="settings_clock_header">Time format</string>
     <string name="settings_clock_24h">24 h</string>
     <string name="settings_clock_12h">12 h</string>

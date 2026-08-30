@@ -3,6 +3,7 @@ package com.mab.aura.core.net
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import okio.Buffer
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -196,6 +197,51 @@ class AemetClientTest {
         val request = server.takeRequest()
         assertEquals("/rss/obs.xml", request.path)
         assertFalse(request.path!!.contains("api_key"))
+    }
+
+    @Test
+    fun verifyKey_returnsValidOnAnEnvelopeWithDatos_andNeverFetchesThePayload() = runTest {
+        server.enqueue(envelopePointingToDatos())
+
+        assertEquals(KeyStatus.Valid, client().verifyKey())
+        // The whole point of the probe: only the envelope is fetched, never the datos payload.
+        assertEquals(1, server.requestCount)
+        val request = server.takeRequest()
+        assertTrue(request.path!!.startsWith("/opendata/api/prediccion/nacional/hoy"))
+        assertTrue(request.path!!.contains("api_key=KEY"))
+    }
+
+    @Test
+    fun verifyKey_returnsInvalidKeyOn401And403() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401))
+        assertEquals(KeyStatus.InvalidKey, client().verifyKey())
+
+        server.enqueue(MockResponse().setResponseCode(403))
+        assertEquals(KeyStatus.InvalidKey, client().verifyKey())
+    }
+
+    @Test
+    fun verifyKey_returnsRateLimitedAfterExhaustingRetries() = runTest {
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(429)) } // initial + 2 retries
+
+        assertEquals(KeyStatus.RateLimited, client().verifyKey())
+    }
+
+    @Test
+    fun verifyKey_returnsOfflineWhenNoResponseReachesUs() = runTest {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+
+        assertEquals(KeyStatus.Offline, client().verifyKey())
+    }
+
+    @Test
+    fun verifyKey_returnsServerProblemOnAnEnvelopeWithoutDatosAndOnOtherHttpErrors() = runTest {
+        // AEMET answered, but with no usable datos URL: reachable, so not the key's fault.
+        server.enqueue(MockResponse().setBody("""{"estado":404,"descripcion":"No hay datos"}"""))
+        assertEquals(KeyStatus.ServerProblem, client().verifyKey())
+
+        server.enqueue(MockResponse().setResponseCode(500))
+        assertEquals(KeyStatus.ServerProblem, client().verifyKey())
     }
 
     private fun tarOf(vararg entries: Pair<String, ByteArray>): ByteArray {

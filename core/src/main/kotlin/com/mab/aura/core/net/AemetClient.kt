@@ -16,6 +16,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
@@ -35,6 +36,23 @@ sealed class AemetClientException(message: String) : Exception(message) {
     class Decoding(val detail: String) : AemetClientException("decoding: $detail")
     /** Still rate-limited (429) after exhausting retries. */
     object RateLimited : AemetClientException("rate limited")
+}
+
+/**
+ * The outcome of [AemetClient.verifyKey], classifying a single key check into exactly one state without
+ * throwing, so the UI can map each to its own message. Mirrors the iOS `AEMETClient.verifyKey` states.
+ */
+enum class KeyStatus {
+    /** The envelope came back with a usable `datos` URL: the key works. */
+    Valid,
+    /** HTTP 401/403: the key is wrong or has expired. */
+    InvalidKey,
+    /** HTTP 429: the per-key budget is spent right now; the key itself may be fine. */
+    RateLimited,
+    /** No network reached AEMET. */
+    Offline,
+    /** AEMET answered but gave no usable envelope, or any other error: the key is not the fault. */
+    ServerProblem,
 }
 
 /**
@@ -67,6 +85,12 @@ class AemetClient(
 ) {
     companion object {
         const val DEFAULT_BASE = "https://opendata.aemet.es/opendata/api"
+
+        /**
+         * The probe path for [verifyKey]: a stable, parameter-free national product that always exists, so the
+         * check never depends on a location or date. Only its envelope is fetched, never the payload.
+         */
+        const val VERIFY_PATH = "/prediccion/nacional/hoy"
 
         /**
          * AEMET's keyless observation RSS. A plain static-host GET (no api_key, no envelope), served from
@@ -109,6 +133,32 @@ class AemetClient(
         val envelope = requestEnvelope(path)
         return perform(datosUrl(envelope))
     }
+
+    /**
+     * The cheapest possible check that the configured key works: one envelope request to [VERIFY_PATH],
+     * classified into a [KeyStatus] and returned without throwing. The `datos` payload is never fetched, so
+     * this is a single tiny request and a single hit against the per-key budget (it still funnels through
+     * [perform], so it is paced and 429-retried like any other call). A valid key returns an envelope carrying
+     * a `datos` URL; a rejected key returns 401/403. Direct port of the iOS `AEMETClient.verifyKey`.
+     */
+    suspend fun verifyKey(): KeyStatus =
+        try {
+            val envelope = requestEnvelope(VERIFY_PATH)
+            // A valid key yields an envelope with a usable datos URL. An envelope with no datos URL means AEMET
+            // answered but had nothing to give: reachable, so not the key's fault.
+            if (envelope.datos?.toHttpUrlOrNull() != null) KeyStatus.Valid else KeyStatus.ServerProblem
+        } catch (e: AemetClientException.Http) {
+            if (e.code == 401 || e.code == 403) KeyStatus.InvalidKey else KeyStatus.ServerProblem
+        } catch (e: AemetClientException.RateLimited) {
+            KeyStatus.RateLimited
+        } catch (e: IOException) {
+            // No response reached us at all: DNS, connect, or read failure.
+            KeyStatus.Offline
+        } catch (e: AemetClientException) {
+            // MissingApiKey, Decoding or AemetStatus: AEMET was reachable (or no key was set) but gave nothing
+            // usable. The key is not what failed.
+            KeyStatus.ServerProblem
+        }
 
     private suspend fun requestEnvelope(path: String): Envelope {
         if (apiKey.isEmpty()) throw AemetClientException.MissingApiKey

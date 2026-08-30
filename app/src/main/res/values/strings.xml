@@ -146,6 +146,13 @@
     <string name="settings_key_absent">No hay clave guardada.</string>
     <string name="settings_key_updated">Clave actualizada.</string>
     <string name="settings_key_help">Si la predicción deja de actualizarse, pide otra clave gratis en opendata.aemet.es y pégala aquí.</string>
+    <string name="settings_verify_key">Comprobar clave</string>
+    <string name="settings_verify_checking">Comprobando…</string>
+    <string name="settings_verify_valid">La clave funciona correctamente.</string>
+    <string name="settings_verify_invalid">La clave no es válida o ha caducado. Vuelve a copiarla.</string>
+    <string name="settings_verify_rate_limited">Demasiadas peticiones ahora mismo. La clave parece correcta; prueba en un minuto.</string>
+    <string name="settings_verify_offline">Sin conexión. Comprueba tu red e inténtalo de nuevo.</string>
+    <string name="settings_verify_server">AEMET no responde ahora mismo. El problema no parece ser la clave.</string>
     <string name="settings_clock_header">Formato de hora</string>
     <string name="settings_clock_24h">24 h</string>
     <string name="settings_clock_12h">12 h</string>

@@ -42,7 +42,9 @@ Two things the keep rules in `app/proguard-rules.pro` protect, because R8 breaka
 
 Everything else Aura uses (Glance, WorkManager, DataStore, OkHttp) ships its own consumer rules, and the manifest entry points are kept by AGP automatically, so the rules file stays small. The `res/raw` assets (Lottie animations, the FNMT cert) are referenced by explicit `R.raw.*`/`@raw` ids and the hero art lives in `assets/` (which the resource shrinker never touches), so none of it needs a `keep.xml`.
 
-`mapping.txt` is produced at `app/build/outputs/mapping/release/mapping.txt` on every release build; upload it to Play (or keep it with the release) so crash stack traces de-obfuscate.
+The R8 mapping is produced at `app/build/outputs/mapping/release/mapping.txt` on every release build, and AGP also embeds it inside the AAB at `BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`. So there is no separate mapping upload on Play: it extracts the embedded copy automatically when it ingests the bundle, and crash and ANR stack traces de-obfuscate on their own. The `mapping.txt` on disk is just the local copy to keep with the release.
+
+Play may also warn that the bundle "contains native code" with no debug symbols. That is a recommendation, not a blocker, and it is safe to dismiss: the only native code is two tiny already-stripped AndroidX prebuilts (`libandroidx.graphics.path.so`, `libdatastore_shared_counter.so`), Aura's own code is pure Kotlin covered by the mapping above, and satisfying the warning would need `ndk { debugSymbolLevel = "SYMBOL_TABLE" }` plus installing the NDK, a toolchain addition the project avoids. Revisit only if a native crash inside one of those libs ever shows up.
 
 Verified on the emulator from a signed release install: the app launches under obfuscation, the AEMET key saves and loads through the encrypted store, a live fetch deserializes and renders (hero summary, multi-day forecast, sun-path card, forecast bulletin, news feed), the hero art loads, and the English-chrome / Spanish-data localization boundary holds. A physical-device pass belongs to the next real release.
 

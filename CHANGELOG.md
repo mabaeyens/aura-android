@@ -2,6 +2,16 @@
 
 Notable changes to aura-android, newest first.
 
+## [1.2.0] - 2026-08-30
+
+More of the iOS cards ported across, plus a couple of clarity and rate-limit fixes.
+
+- New AEMET national text forecast card: the official plain-language outlook for Spain, alongside the existing regional bulletin.
+- New surface analysis map card, the last iOS card that was still missing, so the Android layout now matches the iOS one card for card.
+- The hero temperature now always leads with the current-hour forecast and never swaps in the observed reading, so it matches the hourly strip and the widget exactly.
+- New data-freshness help page that explains when each reading updates, so it is clear why the observation, the forecast and the warnings refresh at different times.
+- Softer wording on the "too many requests" (429) notice, and pull-to-refresh is now capped at one AEMET call a minute so a busy tap can't trip the rate limit.
+
 ## [1.1.1] - 2026-08-27
 
 A corrected build resubmitted after review feedback, plus an English UI and a widget framing fix.

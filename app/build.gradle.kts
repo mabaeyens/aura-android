@@ -129,6 +129,11 @@ dependencies {
     // strip. App-only; the Glance widget can't animate (RemoteViews), so it keeps the static drawables.
     implementation(libs.lottie.compose)
 
+    // Google Play Billing: the tip jar's three consumable in-app products (ui/tipjar/*). The only place money
+    // ever changes hands; there is no server, so purchase state is used on-device only (consumed so a tip can
+    // be repeated) and never transmitted, keeping the Data safety declaration true (financial info = No).
+    implementation(libs.androidx.billing.ktx)
+
     // JVM unit tests for the app-side pure logic (e.g. AuraSunPath position maths). These run on the
     // local JVM with `./gradlew :app:testDebugUnitTest`; no device or Robolectric needed, since the code
     // under test only touches Compose value classes (Offset) and java.time, not the Android framework.

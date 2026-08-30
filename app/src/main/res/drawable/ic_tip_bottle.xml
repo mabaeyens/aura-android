@@ -1,0 +1,17 @@
+<!--
+  Tonic bottle for the tip jar (Propina), matching the iOS "waterbottle" SF Symbol used in the hero menu and
+  the tip screen header. A plain silhouette: cap, shoulders, and a rounded body. material-icons-core has no
+  bottle, and we deliberately don't pull in the large material-icons-extended artifact just for one glyph, so
+  this is a small hand-drawn vector instead. The fillColor here is a placeholder: every use goes through
+  Compose's Icon(), which tints the drawable with the current content colour (white on the sky gradient).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10,3 L14,3 L14,6 Q16,8 16,11 L16,19 Q16,21 14,21 L10,21 Q8,21 8,19 L8,11 Q8,8 10,6 Z" />
+</vector>

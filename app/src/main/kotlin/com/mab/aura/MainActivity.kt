@@ -19,10 +19,11 @@ import com.mab.aura.ui.locations.AddLocationScreen
 import com.mab.aura.ui.locations.LocationsScreen
 import com.mab.aura.ui.settings.SettingsScreen
 import com.mab.aura.ui.theme.AuraTheme
+import com.mab.aura.ui.tipjar.TipJarScreen
 import com.mab.aura.work.WeatherRefreshScheduler
 
 /** The app's destinations. Hoy is the root; every other screen returns to a statically-known parent (see below). */
-private enum class Screen { Hoy, Settings, Locations, AddLocation, Help, DataFreshness, About }
+private enum class Screen { Hoy, Settings, Locations, AddLocation, Help, DataFreshness, About, TipJar }
 
 /**
  * The app's single activity. It hosts the live "Hoy" screen (a full-bleed sky, its own surface), "Ajustes",
@@ -52,6 +53,7 @@ class MainActivity : ComponentActivity() {
                         onOpenLocations = { screen = Screen.Locations },
                         onOpenHelp = { screen = Screen.Help },
                         onOpenAbout = { screen = Screen.About },
+                        onOpenTipJar = { screen = Screen.TipJar },
                     )
 
                     Screen.Settings -> {
@@ -102,6 +104,16 @@ class MainActivity : ComponentActivity() {
                     Screen.About -> {
                         BackHandler { screen = Screen.Hoy }
                         AcercaScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { screen = Screen.Hoy },
+                        )
+                    }
+
+                    // Reached from the hero menu like About, so Back returns to Hoy (matching the iOS tip jar,
+                    // which dismisses back to Today).
+                    Screen.TipJar -> {
+                        BackHandler { screen = Screen.Hoy }
+                        TipJarScreen(
                             modifier = Modifier.fillMaxSize(),
                             onBack = { screen = Screen.Hoy },
                         )

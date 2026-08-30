@@ -176,6 +176,7 @@
     <string name="hoy_menu_settings">Ajustes</string>
     <string name="hoy_menu_help">Ayuda</string>
     <string name="hoy_menu_about">Acerca de</string>
+    <string name="hoy_menu_tipjar">Propina</string>
     <string name="hoy_scroll_hint">Desliza para ver la previsión</string>
     <string name="hoy_location_permission_denied">Sin permiso de ubicación. Mostrando Madrid.</string>
     <string name="hoy_location_services_off">La ubicación está desactivada. Mostrando Madrid.</string>
@@ -368,6 +369,22 @@
     <string name="widget_config_app_location_subtitle">Sigue la ubicación activa de Aura</string>
     <string name="widget_config_empty_favourites">Guarda ubicaciones en la app para poder fijar una aquí.</string>
     <string name="widget_config_selected">Seleccionada</string>
+
+    <!-- Tip jar (Propina) -->
+    <string name="tipjar_title">Propina</string>
+    <string name="tipjar_heading">Invítame a una tónica</string>
+    <string name="tipjar_body">Aura es gratis, sin anuncios y sin cuentas. Si te acompaña cada mañana y te apetece darme las gracias, puedes invitarme a una tónica. No desbloquea nada: es solo un gesto, y me alegra el día.</string>
+    <string name="tipjar_footnote">Las propinas se pueden repetir y no desbloquean funciones.</string>
+    <string name="tipjar_loading">Cargando…</string>
+    <string name="tipjar_load_error">No se pudieron cargar las propinas.</string>
+    <string name="tipjar_error_failed">No se pudo completar la propina. Inténtalo de nuevo.</string>
+    <string name="tipjar_alert_title">Vaya</string>
+    <string name="tipjar_thanks_title">¡Gracias!</string>
+    <string name="tipjar_thanks_body">Va por tu tónica. Que la disfrutes tú también.</string>
+    <string name="tipjar_pending_title">Pendiente de aprobar</string>
+    <string name="tipjar_pending_body">La compra está a la espera de aprobación. Gracias de todos modos.</string>
+    <string name="tipjar_close">Cerrar</string>
+    <string name="tipjar_ok">Vale</string>
 
     <!-- Plurals -->
     <plurals name="sheet_moon_event_in_days">

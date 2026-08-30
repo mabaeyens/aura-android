@@ -39,6 +39,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -92,6 +94,7 @@ fun HoyScreen(
     onOpenLocations: () -> Unit = {},
     onOpenHelp: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onOpenTipJar: () -> Unit = {},
     now: Instant = Instant.now(),
 ) {
     val viewModel: HoyViewModel = viewModel()
@@ -225,6 +228,17 @@ fun HoyScreen(
                     onClick = {
                         menuOpen = false
                         onOpenAbout()
+                    },
+                )
+                // The tip jar sits below a divider, last, set apart from the app's own screens, matching the
+                // iOS hero menu where "Propina" is separated from Forecast/Locations/Settings/Help.
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.hoy_menu_tipjar)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_tip_bottle), contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenTipJar()
                     },
                 )
             }

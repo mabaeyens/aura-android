@@ -287,7 +287,12 @@ class WeatherRepository(context: Context) {
     private fun messageFor(error: Throwable): String = when (error) {
         is AemetClientException.MissingApiKey -> appContext.getString(R.string.repo_error_missing_key)
         is AemetClientException.RateLimited -> appContext.getString(R.string.repo_error_rate_limited)
-        is AemetClientException.Http -> appContext.getString(R.string.repo_error_http, error.code)
+        // A 401/403 is an auth failure, not a network problem: the key is wrong or expired. Say so, so the
+        // user thinks to re-check their key rather than their connection. Any other status stays the generic
+        // network message. Mirrors the iOS AEMETClient error mapping.
+        is AemetClientException.Http ->
+            if (error.code == 401 || error.code == 403) appContext.getString(R.string.repo_error_key_invalid)
+            else appContext.getString(R.string.repo_error_http, error.code)
         is AemetClientException.AemetStatus ->
             appContext.getString(R.string.repo_error_aemet_status, error.estado, error.descripcion)
         is AemetClientException.Decoding -> appContext.getString(R.string.repo_error_decoding)

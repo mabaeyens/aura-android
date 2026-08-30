@@ -188,6 +188,7 @@
     <string name="repo_error_missing_key">AEMET key missing. Add it in Settings.</string>
     <string name="repo_error_rate_limited">Hold on, I need a minute</string>
     <string name="repo_error_http">Network error (HTTP %1$d).</string>
+    <string name="repo_error_key_invalid">Your AEMET key is invalid or has expired. Copy it again in Settings.</string>
     <string name="repo_error_aemet_status">AEMET returned %1$d: %2$s</string>
     <string name="repo_error_decoding">Could not read the data from AEMET.</string>
     <string name="repo_error_offline">No connection. Showing the latest available data.</string>

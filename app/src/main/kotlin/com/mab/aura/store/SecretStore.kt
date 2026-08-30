@@ -39,11 +39,18 @@ class SecretStore(context: Context) {
         )
     }
 
-    /** Store (or replace) the AEMET API key. An empty/blank string clears it, matching the Swift. */
+    /**
+     * Store (or replace) the AEMET API key. An empty/blank string clears it, matching the Swift.
+     *
+     * Every whitespace character is stripped, not just the ends: a valid AEMET key is a JWT and never
+     * contains internal whitespace, but email clients line-wrap it, so a pasted key can carry an internal
+     * newline or space that survives end-trimming and would be persisted corrupt, causing a 401. Filtering
+     * all whitespace makes the paste robust. Mirrors the iOS AuraKeychain.setAPIKey fix.
+     */
     fun setApiKey(key: String) {
-        val trimmed = key.trim()
+        val cleaned = key.filterNot { it.isWhitespace() }
         prefs.edit().apply {
-            if (trimmed.isEmpty()) remove(API_KEY) else putString(API_KEY, trimmed)
+            if (cleaned.isEmpty()) remove(API_KEY) else putString(API_KEY, cleaned)
         }.apply()
     }
 

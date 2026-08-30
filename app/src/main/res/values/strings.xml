@@ -191,6 +191,7 @@
     <string name="repo_error_missing_key">Falta la clave de AEMET. Añádela en Ajustes.</string>
     <string name="repo_error_rate_limited">Espera, necesito un minuto</string>
     <string name="repo_error_http">Error de red (HTTP %1$d).</string>
+    <string name="repo_error_key_invalid">La clave AEMET no es válida o ha caducado. Vuelve a copiarla en Ajustes.</string>
     <string name="repo_error_aemet_status">AEMET devolvió %1$d: %2$s</string>
     <string name="repo_error_decoding">No se pudieron leer los datos de AEMET.</string>
     <string name="repo_error_offline">Sin conexión. Se muestran los últimos datos disponibles.</string>

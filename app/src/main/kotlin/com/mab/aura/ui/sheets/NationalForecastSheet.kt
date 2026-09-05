@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mab.aura.R
@@ -83,6 +84,8 @@ internal fun AuraNationalForecastSheet(state: NationalForecastState, onClose: ()
                     fontSize = 25.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(end = 34.dp), // clear of the close button
                 )
                 Text(

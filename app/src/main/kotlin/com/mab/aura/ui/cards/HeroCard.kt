@@ -137,11 +137,11 @@ fun AuraHeroCard(
                     imageVector = Icons.Filled.Warning,
                     contentDescription = null,
                     tint = Palette.alert(alert.level),
-                    modifier = Modifier.size(size.bodySize.value.dp),
+                    modifier = Modifier.size((size.bodySize - 4).value.dp),
                 )
                 Text(
                     text = alert.shortLabel,
-                    fontSize = size.bodySize,
+                    fontSize = size.bodySize - 4,
                     fontWeight = FontWeight.SemiBold,
                     color = Palette.alert(alert.level),
                     style = heroShadow,
